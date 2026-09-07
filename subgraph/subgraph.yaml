@@ -1,0 +1,26 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: SettlementAnchor
+    network: sepolia
+    source:
+      address: "0x7FF282B4BEc3b2fE58981441317B5892E23361C2"
+      abi: SettlementAnchor
+      startBlock: 11656172
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Bond
+        - LifecycleEvent
+        - IssuerStanding
+      abis:
+        - name: SettlementAnchor
+          file: ./abis/SettlementAnchor.json
+      eventHandlers:
+        - event: LifecycleEvent(indexed bytes32,indexed address,uint8,uint256,bool,string)
+          handler: handleLifecycleEvent
+      file: ./src/mapping.ts
