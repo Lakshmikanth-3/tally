@@ -1,4 +1,4 @@
-import { Bond } from '@hashgraph/asset-tokenization-sdk';
+import { Bond, CreateBondFixedRateRequest } from '@hashgraph/asset-tokenization-sdk';
 import { ATS_TESTNET } from './init';
 
 const USD_CURRENCY_BYTES3 = '0x555344'; // hex of ASCII "USD", per FormatValidation.checkBytes3Format
@@ -33,34 +33,36 @@ export interface IssuedBond {
 export async function issueFixedRateBond(params: IssueBondParams): Promise<IssuedBond> {
   const rateDecimals = 2;
 
-  const result = await Bond.createFixedRate({
-    name: params.name,
-    symbol: params.symbol,
-    isin: params.isin,
-    decimals: 6,
-    isWhiteList: true,
-    erc20VotesActivated: false,
-    isControllable: true,
-    arePartitionsProtected: false,
-    isMultiPartition: false,
-    clearingActive: false,
-    internalKycActivated: true,
-    diamondOwnerAccount: params.issuerAccountId,
-    currency: USD_CURRENCY_BYTES3,
-    numberOfUnits: '1',
-    nominalValue: params.faceValueUSD,
-    nominalValueDecimals: 6,
-    startingDate: String(params.startingDateSeconds),
-    maturityDate: String(params.maturityDateSeconds),
-    regulationType: 0, // no regulation — honest for a testnet demo bond, not a real securities offering
-    regulationSubType: 0,
-    isCountryControlListWhiteList: true,
-    countries: '',
-    configId: ATS_TESTNET.bondConfigId,
-    configVersion: 1,
-    rate: params.couponBps,
-    rateDecimals,
-  } as Parameters<typeof Bond.createFixedRate>[0]);
+  const result = await Bond.createFixedRate(
+    new CreateBondFixedRateRequest({
+      name: params.name,
+      symbol: params.symbol,
+      isin: params.isin,
+      decimals: 6,
+      isWhiteList: true,
+      erc20VotesActivated: false,
+      isControllable: true,
+      arePartitionsProtected: false,
+      isMultiPartition: false,
+      clearingActive: false,
+      internalKycActivated: true,
+      diamondOwnerAccount: params.issuerAccountId,
+      currency: USD_CURRENCY_BYTES3,
+      numberOfUnits: '1',
+      nominalValue: params.faceValueUSD,
+      nominalValueDecimals: 6,
+      startingDate: String(params.startingDateSeconds),
+      maturityDate: String(params.maturityDateSeconds),
+      regulationType: 0, // no regulation — honest for a testnet demo bond, not a real securities offering
+      regulationSubType: 0,
+      isCountryControlListWhiteList: true,
+      countries: '',
+      configId: ATS_TESTNET.bondConfigId,
+      configVersion: 1,
+      rate: params.couponBps,
+      rateDecimals,
+    }),
+  );
 
   if (!result.security.diamondAddress || !result.security.evmDiamondAddress) {
     throw new Error(`Bond.createFixedRate succeeded but returned no diamond address (txId=${result.transactionId})`);

@@ -1,5 +1,16 @@
-import { Network } from '@hashgraph/asset-tokenization-sdk';
-import type { SupportedWallets as SupportedWalletsType } from '@hashgraph/asset-tokenization-sdk';
+import { ConnectRequest, InitializationRequest, Network, SupportedWallets } from '@hashgraph/asset-tokenization-sdk';
+
+type ImplicitNetworkConfig = ConstructorParameters<typeof InitializationRequest>[0];
+
+// MirrorNode/JsonRpcRelay are plain value classes (no `.validate()`, unlike
+// the ValidatedRequest classes below) but aren't exported from the package
+// root — a structurally-matching plain object works identically at runtime.
+function mirrorNode(baseUrl: string): ImplicitNetworkConfig['mirrorNode'] {
+  return { baseUrl } as ImplicitNetworkConfig['mirrorNode'];
+}
+function rpcNode(baseUrl: string): ImplicitNetworkConfig['rpcNode'] {
+  return { baseUrl } as ImplicitNetworkConfig['rpcNode'];
+}
 
 // Real, live Hedera testnet deployment of Asset Tokenization Studio's
 // Factory + BusinessLogicResolver, as published in the ATS repo's own web
@@ -24,15 +35,18 @@ let initialized = false;
 
 async function ensureInitialized(): Promise<void> {
   if (initialized) return;
-  await Network.init({
-    network: ATS_TESTNET.network,
-    mirrorNode: { baseUrl: ATS_TESTNET.mirrorNodeUrl },
-    rpcNode: { baseUrl: ATS_TESTNET.rpcNodeUrl },
-    configuration: {
-      factoryAddress: ATS_TESTNET.factoryAddress,
-      resolverAddress: ATS_TESTNET.resolverAddress,
-    },
-  } as Parameters<typeof Network.init>[0]);
+
+  await Network.init(
+    new InitializationRequest({
+      network: ATS_TESTNET.network,
+      mirrorNode: mirrorNode(ATS_TESTNET.mirrorNodeUrl),
+      rpcNode: rpcNode(ATS_TESTNET.rpcNodeUrl),
+      configuration: {
+        factoryAddress: ATS_TESTNET.factoryAddress,
+        resolverAddress: ATS_TESTNET.resolverAddress,
+      },
+    }),
+  );
   initialized = true;
 }
 
@@ -41,25 +55,21 @@ async function ensureInitialized(): Promise<void> {
 /// integration test suite uses to sign without a MetaMask browser session
 /// (see packages/ats/sdk/__tests__/config.ts and MetamaskService.register
 /// in the upstream repo — `debug: true` skips the window.ethereum check).
-///
-/// [VERIFY ON FIRST REAL CALL]: this exact signing path has not yet been
-/// exercised end-to-end against a live Hedera testnet transaction in this
-/// codebase — confirm a real Bond.create call succeeds before relying on it
-/// for the demo, and adjust if the live SDK behaves differently than the
-/// source read here suggests.
 export async function connectAtsBackend(creds: AtsCredentials) {
   await ensureInitialized();
 
-  return Network.connect({
-    network: ATS_TESTNET.network,
-    mirrorNode: { baseUrl: ATS_TESTNET.mirrorNodeUrl },
-    rpcNode: { baseUrl: ATS_TESTNET.rpcNodeUrl },
-    wallet: 'METAMASK' as unknown as SupportedWalletsType,
-    debug: true,
-    account: {
-      id: creds.accountId,
-      evmAddress: creds.evmAddress,
-      privateKey: { key: creds.privateKeyHex, type: 'ECDSA' },
-    },
-  } as unknown as Parameters<typeof Network.connect>[0]);
+  return Network.connect(
+    new ConnectRequest({
+      network: ATS_TESTNET.network,
+      mirrorNode: mirrorNode(ATS_TESTNET.mirrorNodeUrl),
+      rpcNode: rpcNode(ATS_TESTNET.rpcNodeUrl),
+      wallet: SupportedWallets.METAMASK,
+      debug: true,
+      account: {
+        accountId: creds.accountId,
+        evmAddress: creds.evmAddress,
+        privateKey: { key: creds.privateKeyHex, type: 'ECDSA' },
+      },
+    }),
+  );
 }
