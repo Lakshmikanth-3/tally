@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bpsOf, toUsdString, USD_SCALE } from './money';
+import { bpsOf, parseUsdToMicros, toUsdString, USD_SCALE } from './money';
 
 describe('bpsOf', () => {
   it('computes basis points as integer BigInt arithmetic', () => {
@@ -24,5 +24,28 @@ describe('bpsOf', () => {
 describe('toUsdString', () => {
   it('formats a scaled bigint as a plain integer string', () => {
     expect(toUsdString(18_400n * USD_SCALE)).toBe((18_400n * USD_SCALE).toString());
+  });
+});
+
+describe('parseUsdToMicros', () => {
+  it('parses a whole dollar amount', () => {
+    expect(parseUsdToMicros('42')).toBe(42_000_000n);
+  });
+
+  it('parses a fractional dollar amount without float error', () => {
+    expect(parseUsdToMicros('42.50')).toBe(42_500_000n);
+  });
+
+  it('parses the full 6 decimal places', () => {
+    expect(parseUsdToMicros('0.000001')).toBe(1n);
+  });
+
+  it('rejects more than 6 fractional digits rather than truncating silently', () => {
+    expect(() => parseUsdToMicros('1.1234567')).toThrow();
+  });
+
+  it('rejects negative and non-numeric input', () => {
+    expect(() => parseUsdToMicros('-5')).toThrow();
+    expect(() => parseUsdToMicros('abc')).toThrow();
   });
 });
