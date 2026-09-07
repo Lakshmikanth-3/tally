@@ -1,0 +1,23 @@
+type Bond @entity(immutable: false) {
+  id: ID! # bondId
+  issuer: Bytes!
+  events: [LifecycleEvent!]! @derivedFrom(field: "bond")
+}
+
+type LifecycleEvent @entity(immutable: true) {
+  id: ID! # tx hash + log index
+  bond: Bond!
+  kind: String! # "issued" | "coupon" | "resale" | "redeemed" | "defaulted"
+  timestamp: BigInt!
+  onTime: Boolean
+  hcsTxId: String!
+}
+
+type IssuerStanding @entity(immutable: false) {
+  id: ID! # issuer address
+  bondsIssued: Int!
+  couponsOnTime: Int!
+  couponsLate: Int!
+  defaults: Int!
+  lastUpdated: BigInt!
+}
