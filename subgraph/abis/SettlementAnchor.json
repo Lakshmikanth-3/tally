@@ -1,0 +1,107 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_recorder",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "anchor",
+    "inputs": [
+      {
+        "name": "bondId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "internalType": "enum SettlementAnchor.EventKind"
+      },
+      {
+        "name": "onTime",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "hcsTxId",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "recorder",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "LifecycleEvent",
+    "inputs": [
+      {
+        "name": "bondId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum SettlementAnchor.EventKind"
+      },
+      {
+        "name": "timestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "onTime",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "hcsTxId",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "NotRecorder",
+    "inputs": []
+  }
+]
