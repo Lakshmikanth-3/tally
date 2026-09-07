@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: 'Inter', sans-serif; }
+    a { color: #2563EB; } a:hover { color: #1D4ED8; }
+    .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  </style>
+</helmet>
+<div style="width:1280px; height:860px; background:#F8FAFC; color:#0F172A; position:relative; overflow:hidden;">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:22px 40px; background:#FFFFFF; border-bottom:1px solid #E2E8F0;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#2563EB" stroke-width="1.8"/><path d="M7 10h10M7 14h6" stroke="#2563EB" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span style="font-size:18px; font-weight:700; letter-spacing:-0.01em;">Tally</span>
+    </div>
+    <div style="display:flex; gap:28px; font-size:13px; color:#64748B; font-weight:500;">
+      <span style="color:#2563EB;">Issue</span><span>Book</span><span>Register</span>
+    </div>
+  </div>
+
+  <div style="padding:44px 40px; display:flex; gap:40px;">
+
+    <!-- stepper + form area -->
+    <div style="flex:0 0 380px;">
+      <div style="font-size:12px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:16px;">Issuance flow</div>
+      <div style="display:flex; flex-direction:column; gap:0;">
+        <div style="display:flex; gap:12px; padding-bottom:22px; position:relative;">
+          <div style="width:24px; height:24px; border-radius:50%; background:#2563EB; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="position:absolute; left:11px; top:24px; bottom:0; width:2px; background:#2563EB;"></div>
+          <div><div style="font-size:14px; font-weight:600;">Compliance check</div><div style="font-size:12px; color:#64748B; margin-top:2px;">Identity registry verified</div></div>
+        </div>
+        <div style="display:flex; gap:12px; padding-bottom:22px; position:relative;">
+          <div style="width:24px; height:24px; border-radius:50%; background:#2563EB; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="position:absolute; left:11px; top:24px; bottom:0; width:2px; background:#2563EB;"></div>
+          <div><div style="font-size:14px; font-weight:600;">Chainlink CRE underwriting</div><div style="font-size:12px; color:#64748B; margin-top:2px;">Revenue read inside secure enclave</div></div>
+        </div>
+        <div style="display:flex; gap:12px; padding-bottom:22px; position:relative;">
+          <div style="width:24px; height:24px; border-radius:50%; background:#2563EB; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="position:absolute; left:11px; top:24px; bottom:0; width:2px; background:#E2E8F0;"></div>
+          <div><div style="font-size:14px; font-weight:600;">Deploy bond on Hedera</div><div style="font-size:12px; color:#64748B; margin-top:2px;">Via Asset Tokenization Studio</div></div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div style="width:24px; height:24px; border-radius:50%; border:2px solid #CBD5E1; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#94A3B8; flex-shrink:0;">4</div>
+          <div><div style="font-size:14px; font-weight:600; color:#94A3B8;">Anchor to public register</div><div style="font-size:12px; color:#94A3B8; margin-top:2px;">Indexed by The Graph</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- verdict + card -->
+    <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+
+      <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:28px 32px; box-shadow:0 1px 2px rgba(15,23,42,0.04);">
+        <div style="display:flex; align-items:center; justify-content:between; gap:12px;">
+          <div style="display:flex; align-items:center; gap:8px; background:#ECFDF5; color:#047857; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600; width:fit-content;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#047857" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            APPROVED
+          </div>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:8px; margin-top:16px;">
+          <span class="num" style="font-size:44px; font-weight:700; letter-spacing:-0.02em;">6.20%</span>
+          <span style="font-size:14px; color:#64748B;">coupon rate</span>
+        </div>
+        <div style="font-size:13px; color:#64748B; margin-top:10px; line-height:1.6;">Underwritten from Corrado's Deli's real trailing-90-day revenue, computed privately inside a Chainlink CRE enclave. Only this rate ever left the enclave.</div>
+      </div>
+
+      <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:24px 32px; display:flex; gap:32px;">
+        <div style="flex:1;">
+          <div style="font-size:12px; color:#64748B; font-weight:500;">Face value</div>
+          <div class="num" style="font-size:20px; font-weight:600; margin-top:4px;">$18,400</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:12px; color:#64748B; font-weight:500;">Maturity</div>
+          <div class="num" style="font-size:20px; font-weight:600; margin-top:4px;">90 days</div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:12px; color:#64748B; font-weight:500;">Bond ID</div>
+          <div class="num" style="font-size:14px; font-weight:600; margin-top:6px; color:#2563EB;">0.0.10412201</div>
+        </div>
+      </div>
+
+      <div style="background:#0F172A; border-radius:12px; padding:20px 24px; display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:13px; color:#CBD5E1;">Bank origination: 3–6 weeks, paperwork</span>
+        <span style="font-size:13px; color:#22C55E; font-weight:600;">Tally: 8 minutes, automatic</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; bottom:20px; left:40px; font-size:11px; color:#94A3B8; font-weight:500; letter-spacing:0.03em;">DIRECTION B — CLEAN INSTITUTIONAL: STRIPE/MERCURY-STYLE SAAS DASHBOARD</div>
+</div>
+</x-dc>
+</body>
+</html>

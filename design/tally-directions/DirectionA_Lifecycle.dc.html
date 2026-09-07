@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #B98A2E; } a:hover { color: #d4a13a; }
+    .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+    .serif { font-family: 'Fraunces', serif; }
+    .sans { font-family: 'Inter', sans-serif; }
+  </style>
+</helmet>
+<div class="sans" style="width:1280px; height:860px; background:#1C1410; color:#EDE4D3; position:relative; overflow:hidden;">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:24px 40px; border-bottom:1px solid #4A3826;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h16" stroke="#B98A2E" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="serif" style="font-size:20px; font-weight:600; color:#F1E9D8;">Tally</span>
+    </div>
+    <div class="mono" style="font-size:12px; color:#8A7A63; letter-spacing:0.04em;">/LIFECYCLE/0.0.10412201</div>
+  </div>
+
+  <div style="display:flex; gap:0; padding:40px;">
+
+    <!-- timeline -->
+    <div style="flex:0 0 60px; display:flex; flex-direction:column; align-items:center; padding-top:8px;">
+      <div style="width:10px; height:10px; border-radius:50%; background:#2F6844;"></div>
+      <div style="width:1px; flex:1; background:#4A3826; margin:4px 0;"></div>
+      <div style="width:10px; height:10px; border-radius:50%; background:#2F6844;"></div>
+      <div style="width:1px; flex:1; background:#4A3826; margin:4px 0;"></div>
+      <div style="width:10px; height:10px; border-radius:50%; background:#2F6844;"></div>
+      <div style="width:1px; flex:1; background:#4A3826; margin:4px 0;"></div>
+      <div style="width:10px; height:10px; border-radius:50%; background:#B98A2E;"></div>
+      <div style="width:1px; flex:1; background:#4A3826; margin:4px 0;"></div>
+      <div style="width:10px; height:10px; border-radius:50%; border:2px solid #4A3826; background:transparent;"></div>
+    </div>
+
+    <!-- rows -->
+    <div style="flex:1; display:flex; flex-direction:column; gap:14px;">
+
+      <div style="background:#F1E9D8; color:#1A140F; border-radius:2px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div class="serif" style="font-size:16px; font-weight:600;">Issued</div>
+          <div class="mono" style="font-size:11px; color:#5A4A32; margin-top:2px;">Sep 8, 2026 &middot; tx 0xc003&hellip;9d14</div>
+        </div>
+        <div class="mono" style="font-size:13px; color:#2F6844;">$18,400 &middot; 6.20%</div>
+      </div>
+
+      <div style="background:#F1E9D8; color:#1A140F; border-radius:2px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div class="serif" style="font-size:16px; font-weight:600;">Coupon &mdash; on time</div>
+          <div class="mono" style="font-size:11px; color:#5A4A32; margin-top:2px;">Sep 15, 2026 &middot; scheduled, no keeper</div>
+        </div>
+        <div class="mono" style="font-size:13px; color:#2F6844;">+$95.13</div>
+      </div>
+
+      <div style="background:#F1E9D8; color:#1A140F; border-radius:2px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div class="serif" style="font-size:16px; font-weight:600;">Resale</div>
+          <div class="mono" style="font-size:11px; color:#5A4A32; margin-top:2px;">Sep 20, 2026 &middot; verified counterparty</div>
+        </div>
+        <div class="mono" style="font-size:13px; color:#1A140F;">$18,410 transfer</div>
+      </div>
+
+      <div style="background:#F1E9D8; color:#1A140F; border-radius:2px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; opacity:0.9;">
+        <div>
+          <div class="serif" style="font-size:16px; font-weight:600;">Coupon &mdash; late</div>
+          <div class="mono" style="font-size:11px; color:#8B2E23; margin-top:2px;">Sep 22, 2026 &middot; settled 3 days after due</div>
+        </div>
+        <div class="mono" style="font-size:13px; color:#B98A2E;">+$95.13 (late)</div>
+      </div>
+
+      <div style="border:1px dashed #4A3826; border-radius:2px; padding:18px 24px; display:flex; align-items:center; justify-content:space-between; color:#8A7A63;">
+        <div>
+          <div class="serif" style="font-size:16px; font-weight:600;">Redemption</div>
+          <div class="mono" style="font-size:11px; margin-top:2px;">Dec 7, 2026 &middot; matures in 61 days</div>
+        </div>
+        <div class="mono" style="font-size:13px;">pending</div>
+      </div>
+    </div>
+
+    <!-- side stats -->
+    <div style="flex:0 0 260px; margin-left:32px; display:flex; flex-direction:column; gap:14px;">
+      <div style="background:#2A2019; border:1px solid #4A3826; border-radius:2px; padding:20px;">
+        <div class="mono" style="font-size:10px; color:#8A7A63; letter-spacing:0.06em;">ISSUER STANDING</div>
+        <div class="serif" style="font-size:26px; font-weight:600; color:#F1E9D8; margin-top:8px;">3 / 4</div>
+        <div class="sans" style="font-size:12px; color:#8A7A63; margin-top:2px;">coupons on time</div>
+      </div>
+      <div style="background:#2A2019; border:1px solid #4A3826; border-radius:2px; padding:20px;">
+        <div class="mono" style="font-size:10px; color:#8A7A63; letter-spacing:0.06em;">THE GRAPH</div>
+        <div class="sans" style="font-size:12px; color:#B7A98A; margin-top:8px; line-height:1.5;">Indexed live &mdash; same query resolves for every Tally issuer.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; bottom:24px; left:40px;" class="mono">
+    <span style="font-size:10px; color:#5A4A32; letter-spacing:0.1em;">DIRECTION A &mdash; LEDGER PAPER</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

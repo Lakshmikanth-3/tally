@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: 'Inter', sans-serif; }
+    a { color: #2563EB; } a:hover { color: #1D4ED8; }
+    .num { font-variant-numeric: tabular-nums; }
+    th, td { text-align: left; }
+  </style>
+</helmet>
+<div style="width:1280px; height:860px; background:#F8FAFC; color:#0F172A; position:relative; overflow:hidden;">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:22px 40px; background:#FFFFFF; border-bottom:1px solid #E2E8F0;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="2" stroke="#2563EB" stroke-width="1.8"/><path d="M7 10h10M7 14h6" stroke="#2563EB" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span style="font-size:18px; font-weight:700; letter-spacing:-0.01em;">Tally</span>
+    </div>
+    <div style="font-size:13px; color:#94A3B8; font-weight:500;">Corrado's Deli · Bond 0.0.10412201</div>
+  </div>
+
+  <div style="padding:36px 40px;">
+
+    <div style="display:flex; gap:16px; margin-bottom:28px;">
+      <div style="flex:1; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:20px 24px;">
+        <div style="font-size:12px; color:#64748B; font-weight:500;">Coupon rate</div>
+        <div class="num" style="font-size:24px; font-weight:700; margin-top:6px;">6.20%</div>
+      </div>
+      <div style="flex:1; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:20px 24px;">
+        <div style="font-size:12px; color:#64748B; font-weight:500;">Outstanding</div>
+        <div class="num" style="font-size:24px; font-weight:700; margin-top:6px;">$18,410</div>
+      </div>
+      <div style="flex:1; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:20px 24px;">
+        <div style="font-size:12px; color:#64748B; font-weight:500;">Matures in</div>
+        <div class="num" style="font-size:24px; font-weight:700; margin-top:6px;">61 days</div>
+      </div>
+      <div style="flex:1; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:20px 24px;">
+        <div style="font-size:12px; color:#64748B; font-weight:500;">On-time rate</div>
+        <div class="num" style="font-size:24px; font-weight:700; margin-top:6px; color:#047857;">75%</div>
+      </div>
+    </div>
+
+    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; overflow:hidden;">
+      <div style="padding:18px 24px; border-bottom:1px solid #E2E8F0; font-size:14px; font-weight:600;">Lifecycle events</div>
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="color:#64748B; font-weight:500;">
+            <th style="padding:12px 24px;">Event</th>
+            <th style="padding:12px 24px;">Date</th>
+            <th style="padding:12px 24px;">Status</th>
+            <th style="padding:12px 24px;">Amount</th>
+            <th style="padding:12px 24px;">Tx</th>
+          </tr>
+        </thead>
+        <tbody class="num">
+          <tr style="border-top:1px solid #F1F5F9;">
+            <td style="padding:14px 24px; font-weight:500;">Issued</td>
+            <td style="padding:14px 24px; color:#64748B;">Sep 8, 2026</td>
+            <td style="padding:14px 24px;"><span style="background:#ECFDF5; color:#047857; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Settled</span></td>
+            <td style="padding:14px 24px;">$18,400</td>
+            <td style="padding:14px 24px; color:#2563EB;">0xc003…9d14</td>
+          </tr>
+          <tr style="border-top:1px solid #F1F5F9;">
+            <td style="padding:14px 24px; font-weight:500;">Coupon</td>
+            <td style="padding:14px 24px; color:#64748B;">Sep 15, 2026</td>
+            <td style="padding:14px 24px;"><span style="background:#ECFDF5; color:#047857; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">On time</span></td>
+            <td style="padding:14px 24px;">+$95.13</td>
+            <td style="padding:14px 24px; color:#2563EB;">0xa41f…22b3</td>
+          </tr>
+          <tr style="border-top:1px solid #F1F5F9;">
+            <td style="padding:14px 24px; font-weight:500;">Resale</td>
+            <td style="padding:14px 24px; color:#64748B;">Sep 20, 2026</td>
+            <td style="padding:14px 24px;"><span style="background:#EFF6FF; color:#2563EB; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Verified</span></td>
+            <td style="padding:14px 24px;">$18,410</td>
+            <td style="padding:14px 24px; color:#2563EB;">0x77de…5f10</td>
+          </tr>
+          <tr style="border-top:1px solid #F1F5F9;">
+            <td style="padding:14px 24px; font-weight:500;">Coupon</td>
+            <td style="padding:14px 24px; color:#64748B;">Sep 22, 2026</td>
+            <td style="padding:14px 24px;"><span style="background:#FFFBEB; color:#B45309; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Late</span></td>
+            <td style="padding:14px 24px;">+$95.13</td>
+            <td style="padding:14px 24px; color:#2563EB;">0x0f2c…8a91</td>
+          </tr>
+          <tr style="border-top:1px solid #F1F5F9; color:#94A3B8;">
+            <td style="padding:14px 24px; font-weight:500;">Redemption</td>
+            <td style="padding:14px 24px;">Dec 7, 2026</td>
+            <td style="padding:14px 24px;"><span style="background:#F1F5F9; color:#64748B; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600;">Pending</span></td>
+            <td style="padding:14px 24px;">—</td>
+            <td style="padding:14px 24px;">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="position:absolute; bottom:20px; left:40px; font-size:11px; color:#94A3B8; font-weight:500; letter-spacing:0.03em;">DIRECTION B — CLEAN INSTITUTIONAL</div>
+</div>
+</x-dc>
+</body>
+</html>

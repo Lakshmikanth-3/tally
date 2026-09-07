@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #B98A2E; } a:hover { color: #d4a13a; }
+    .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+    .serif { font-family: 'Fraunces', serif; }
+    .sans { font-family: 'Inter', sans-serif; }
+  </style>
+</helmet>
+<div class="sans" style="width:1280px; height:860px; background:#1C1410; color:#EDE4D3; position:relative; overflow:hidden;">
+
+  <!-- top bar -->
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:24px 40px; border-bottom:1px solid #4A3826;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h10M4 18h16" stroke="#B98A2E" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="serif" style="font-size:20px; font-weight:600; color:#F1E9D8;">Tally</span>
+    </div>
+    <div class="mono" style="font-size:12px; color:#8A7A63; letter-spacing:0.04em;">/ISSUE</div>
+  </div>
+
+  <div style="display:flex; gap:48px; padding:44px 40px;">
+
+    <!-- left: bond certificate -->
+    <div style="flex:0 0 460px;">
+      <div class="mono" style="font-size:11px; color:#8A7A63; letter-spacing:0.08em; margin-bottom:14px;">BOND CERTIFICATE</div>
+      <div style="background:#F1E9D8; color:#1A140F; border-radius:2px; padding:36px 32px; box-shadow:0 20px 40px rgba(0,0,0,0.35); position:relative;">
+        <div style="position:absolute; inset:10px; border:1px solid #C9B896; pointer-events:none;"></div>
+        <div class="mono" style="font-size:10px; letter-spacing:0.12em; color:#8B6F3E;">TALLY REVENUE BOND No. 0014</div>
+        <div class="serif" style="font-size:28px; font-weight:600; margin-top:10px; line-height:1.25;">Corrado's Deli</div>
+        <div class="sans" style="font-size:13px; color:#5A4A32; margin-top:4px;">Trailing-revenue-backed short bond</div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:28px; padding-top:20px; border-top:1px solid #C9B896;">
+          <div>
+            <div class="mono" style="font-size:10px; color:#8B6F3E; letter-spacing:0.06em;">FACE VALUE</div>
+            <div class="mono" style="font-size:22px; font-weight:600; margin-top:4px;">$18,400</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size:10px; color:#8B6F3E; letter-spacing:0.06em;">COUPON</div>
+            <div class="mono" style="font-size:22px; font-weight:600; margin-top:4px; color:#2F6844;">6.20%</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size:10px; color:#8B6F3E; letter-spacing:0.06em;">MATURITY</div>
+            <div class="mono" style="font-size:22px; font-weight:600; margin-top:4px;">90d</div>
+          </div>
+        </div>
+
+        <div style="margin-top:26px; display:flex; align-items:center; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#2F6844" stroke-width="2"/><path d="M8 12.5l2.5 2.5L16 9.5" stroke="#2F6844" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="mono" style="font-size:11px; color:#2F6844; letter-spacing:0.04em;">ISSUED · HEDERA TESTNET · 0.0.10412201</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- right: verdict reveal -->
+    <div style="flex:1;">
+      <div class="mono" style="font-size:11px; color:#8A7A63; letter-spacing:0.08em; margin-bottom:14px;">UNDERWRITING VERDICT</div>
+
+      <div style="background:#2A2019; border:1px solid #4A3826; border-radius:2px; padding:0;">
+        <div style="padding:22px 26px; border-bottom:1px solid #4A3826; display:flex; align-items:center; gap:10px;">
+          <div style="width:8px; height:8px; border-radius:50%; background:#2F6844;"></div>
+          <span class="mono" style="font-size:12px; color:#B7A98A;">Compliance check &mdash; complete</span>
+        </div>
+        <div style="padding:22px 26px; border-bottom:1px solid #4A3826; display:flex; align-items:center; gap:10px;">
+          <div style="width:8px; height:8px; border-radius:50%; background:#2F6844;"></div>
+          <span class="mono" style="font-size:12px; color:#B7A98A;">Chainlink CRE &mdash; revenue read inside enclave</span>
+        </div>
+        <div style="padding:30px 26px;">
+          <div class="serif" style="font-size:15px; color:#8A7A63; margin-bottom:10px;">Verdict</div>
+          <div style="display:flex; align-items:baseline; gap:18px;">
+            <span class="serif" style="font-size:40px; font-weight:600; color:#2F6844;">APPROVED</span>
+            <span class="mono" style="font-size:28px; color:#F1E9D8;">6.20%</span>
+          </div>
+          <div class="sans" style="font-size:12px; color:#8A7A63; margin-top:10px;">Trailing 90-day revenue and volatility read once, privately, inside a Chainlink Confidential Workflow. Only this verdict left the enclave.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:22px; display:flex; gap:12px;">
+        <div style="flex:1; background:#2A2019; border:1px solid #4A3826; border-radius:2px; padding:16px 18px;">
+          <div class="mono" style="font-size:10px; color:#8A7A63;">ATS DEPLOY</div>
+          <div class="mono" style="font-size:13px; color:#2F6844; margin-top:4px;">0x7ff2&hellip;61C2</div>
+        </div>
+        <div style="flex:1; background:#2A2019; border:1px solid #4A3826; border-radius:2px; padding:16px 18px;">
+          <div class="mono" style="font-size:10px; color:#8A7A63;">HCS ANCHOR</div>
+          <div class="mono" style="font-size:13px; color:#2F6844; margin-top:4px;">topic 0.0.9911</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute; bottom:24px; left:40px;" class="mono">
+    <span style="font-size:10px; color:#5A4A32; letter-spacing:0.1em;">DIRECTION A &mdash; LEDGER PAPER: OLD BANK LEDGER MEETS MODERN FINTECH</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

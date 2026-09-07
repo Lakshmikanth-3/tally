@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 190, "w": 640, "h": 480 },
+    { "file": "DirectionA_Issue.dc.html", "x": 760, "y": 0, "w": 1280, "h": 860 },
+    { "file": "DirectionA_Lifecycle.dc.html", "x": 2160, "y": 0, "w": 1280, "h": 860 },
+    { "file": "DirectionB_Issue.dc.html", "x": 760, "y": 980, "w": 1280, "h": 860 },
+    { "file": "DirectionB_Lifecycle.dc.html", "x": 2160, "y": 980, "w": 1280, "h": 860 },
+    { "file": "DirectionC_Issue.dc.html", "x": 760, "y": 1960, "w": 1280, "h": 860 },
+    { "file": "DirectionC_Lifecycle.dc.html", "x": 2160, "y": 1960, "w": 1280, "h": 860 }
+  ],
+  "annotations": [
+    { "id": "label-a", "x": 760, "y": -50, "w": 500, "text": "A — Ledger Paper: old bank ledger meets modern fintech" },
+    { "id": "label-b", "x": 760, "y": 930, "w": 500, "text": "B — Clean Institutional: Stripe/Mercury-style SaaS dashboard" },
+    { "id": "label-c", "x": 760, "y": 1910, "w": 500, "text": "C — Terminal / Onchain-native: dense, technical, block-explorer feel" }
+  ],
+  "launch": { "view": "canvas" }
+}
