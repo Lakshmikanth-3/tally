@@ -1,6 +1,6 @@
 {
   "schedule": "0 */1 * * * *",
-  "url": "https://postman-echo.com/headers",
-  "secretId": "API_TOKEN",
-  "scoreThreshold": 500
+  "consoleBaseUrl": "http://localhost:3000",
+  "issuerId": "issuer-corrados-deli-f5bb20",
+  "secretId": "REVENUE_API_TOKEN"
 }
