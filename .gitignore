@@ -1,0 +1,21 @@
+node_modules/
+.turbo/
+dist/
+.next/
+out/
+.env
+.env.local
+*.local
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/*/31337/
+
+# Subgraph
+subgraph/generated/
+subgraph/build/
+
+# OS
+.DS_Store
+Thumbs.db

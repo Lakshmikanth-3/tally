@@ -1,0 +1,20 @@
+{
+  "name": "tally",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "turbo run dev --filter=console",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "contracts:test": "cd contracts && forge test -vvv",
+    "contracts:deploy": "cd contracts && forge script script/Deploy.s.sol --broadcast",
+    "subgraph:codegen": "cd subgraph && graph codegen",
+    "subgraph:deploy": "cd subgraph && graph deploy --studio tally-register"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "typescript": "^5.6.0"
+  }
+}
