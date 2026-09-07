@@ -1,36 +1,43 @@
 import { Client } from '@hashgraph/sdk';
-import { EventKind, scheduleAnchorCall, type ScheduledAnchorResult } from './coupon';
+import { redeemBondAtMaturity, type RedeemBondParams } from '@tally/ats-client';
+import { anchorNow, EventKind, type AnchorNowResult } from './coupon';
 
-export interface ScheduleRedemptionParams {
+export interface ExecuteRedemptionParams {
   settlementAnchorContractId: string;
   bondId: Uint8Array;
   issuerEvmAddress: string;
-  onTime: boolean;
   hcsTxId: string;
-  maturitySeconds: number;
+  redeem: RedeemBondParams;
 }
 
-/// Arms the Redeemed anchor event to fire at maturity, no keeper — same
-/// mechanism as scheduleAnchorCall in coupon.ts, kept as a separate named
-/// entry point since redemption and coupon scheduling are called from
-/// different points in the bond lifecycle.
-///
-/// [SCOPE NOTE]: this only schedules our own public-record anchor. It does
-/// NOT yet schedule the real ATS-side `Bond.fullRedeemAtMaturity` call that
-/// actually moves principal — that goes through the ATS SDK's own
-/// transaction-signing flow (see packages/ats-client), not a plain
-/// ContractExecuteTransaction, and hasn't been wired up here. Anchoring
-/// without the real redemption call would misrepresent redemption as having
-/// happened when it hasn't — don't call this in place of the real
-/// redemption until that's connected.
-export async function scheduleRedemptionAnchor(client: Client, params: ScheduleRedemptionParams): Promise<ScheduledAnchorResult> {
-  return scheduleAnchorCall(client, {
+export interface ExecuteRedemptionResult {
+  redemption: { success: boolean; transactionId: string };
+  anchor: AnchorNowResult;
+}
+
+/// The real, honest redemption flow: calls ATS's actual
+/// Bond.fullRedeemAtMaturity first, and only anchors the Redeemed lifecycle
+/// event immediately after it genuinely succeeds — never pre-scheduled,
+/// since (unlike a coupon) redemption isn't something Hedera can be told in
+/// advance to execute autonomously (see redeem.ts's doc comment for why).
+/// Call this from a real maturity-day job; it is not itself a no-keeper
+/// mechanism, only the anchor write inside it is trivially cheap once
+/// redemption has happened.
+export async function executeRedemptionAtMaturity(client: Client, params: ExecuteRedemptionParams): Promise<ExecuteRedemptionResult> {
+  const redemption = await redeemBondAtMaturity(params.redeem);
+
+  if (!redemption.success) {
+    throw new Error(`Bond.fullRedeemAtMaturity reported failure (txId=${redemption.transactionId}) — not anchoring a Redeemed event for something that didn't happen`);
+  }
+
+  const anchor = await anchorNow(client, {
     settlementAnchorContractId: params.settlementAnchorContractId,
     bondId: params.bondId,
     issuerEvmAddress: params.issuerEvmAddress,
     kind: EventKind.Redeemed,
-    onTime: params.onTime,
+    onTime: true, // this function is only ever called once redemption has actually succeeded
     hcsTxId: params.hcsTxId,
-    executeAtSeconds: params.maturitySeconds,
   });
+
+  return { redemption, anchor };
 }
