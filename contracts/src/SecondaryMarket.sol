@@ -16,7 +16,7 @@ contract SecondaryMarket {
         address maker;
         bytes32 bondId;
         address bondToken;
-        uint256 priceUSD;    // 6-decimal fixed point
+        uint256 priceUSD; // 6-decimal fixed point
         uint256 quantity;
         bool isBid;
         bool filled;
@@ -24,6 +24,10 @@ contract SecondaryMarket {
 
     mapping(bytes32 => Order) public orders;
     uint256 public orderNonce;
+
+    /// @dev Off-chain reference only — the backend recorder reads this to
+    /// know which SettlementAnchor to call after observing OrderFilled.
+    /// This contract never calls it directly (see fillOrder).
     SettlementAnchor public immutable anchor;
 
     event OrderPlaced(bytes32 indexed orderId, bytes32 indexed bondId, bool isBid, uint256 priceUSD, uint256 quantity);
@@ -49,6 +53,11 @@ contract SecondaryMarket {
     /// rejection demo moment. This function deliberately does not
     /// pre-validate the taker itself, so the demo is proving the real
     /// ATS enforcement path, not a UI-side check that could be faked.
+    ///
+    /// @dev Does not call `anchor` directly: SettlementAnchor's recorder
+    /// gate authorizes only the off-chain backend, which anchors the Resale
+    /// event after observing OrderFilled — the same confirm-then-anchor
+    /// path used for every other lifecycle event.
     function fillOrder(bytes32 orderId) external {
         Order storage o = orders[orderId];
         require(!o.filled, "already filled");
@@ -64,12 +73,13 @@ contract SecondaryMarket {
         }
 
         emit OrderFilled(orderId, msg.sender);
-        anchor.anchor(o.bondId, o.maker, SettlementAnchor.EventKind.Resale, false, "");
     }
 
     function _decodeRevertReason(bytes memory data) private pure returns (string memory) {
         if (data.length < 68) return "unknown";
-        assembly { data := add(data, 0x04) }
+        assembly {
+            data := add(data, 0x04)
+        }
         return abi.decode(data, (string));
     }
 }

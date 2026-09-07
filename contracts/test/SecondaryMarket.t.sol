@@ -58,6 +58,9 @@ contract SecondaryMarketTest is Test {
     function test_FillOrder_SucceedsForVerifiedCounterparty() public {
         bytes32 orderId = _placeAsk();
 
+        vm.expectEmit(true, true, false, true);
+        emit SecondaryMarket.OrderFilled(orderId, verifiedTaker);
+
         vm.prank(verifiedTaker);
         market.fillOrder(orderId);
 
