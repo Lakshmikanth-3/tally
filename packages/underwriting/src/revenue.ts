@@ -12,8 +12,11 @@ export function computeRevenueSnapshot(
   transactions: RawTransaction[],
   nowSeconds: number
 ): RevenueSnapshot {
+  // Half-open window (windowStart, nowSeconds] so "days ago" buckets cleanly
+  // into exactly TRAILING_WINDOW_DAYS slots (0 = today, 89 = 89 days ago)
+  // with no double-counted or dropped boundary transaction.
   const windowStart = nowSeconds - TRAILING_WINDOW_DAYS * SECONDS_PER_DAY;
-  const inWindow = transactions.filter((tx) => tx.timestampSeconds >= windowStart && tx.timestampSeconds <= nowSeconds);
+  const inWindow = transactions.filter((tx) => tx.timestampSeconds > windowStart && tx.timestampSeconds <= nowSeconds);
 
   const trailing90dTotalUSD = inWindow.reduce((sum, tx) => sum + tx.amountUSD, 0n);
 
@@ -22,7 +25,7 @@ export function computeRevenueSnapshot(
       ? 0
       : Math.floor((nowSeconds - Math.min(...transactions.map((tx) => tx.timestampSeconds))) / SECONDS_PER_DAY);
 
-  const volatilityScore = computeVolatilityScore(inWindow, windowStart);
+  const volatilityScore = computeVolatilityScore(inWindow, nowSeconds);
 
   return { issuerId, trailing90dTotalUSD, volatilityScore, historyDays };
 }
@@ -31,14 +34,14 @@ export function computeRevenueSnapshot(
 /// the trailing window, scaled to 0-100. Days with zero submitted
 /// transactions count as $0 revenue days, so a business that only submits
 /// sporadically is scored as volatile — that's real, not a bug.
-function computeVolatilityScore(inWindow: RawTransaction[], windowStart: number): number {
+function computeVolatilityScore(inWindow: RawTransaction[], nowSeconds: number): number {
   const dailyTotals = new Array<number>(TRAILING_WINDOW_DAYS).fill(0);
   for (const tx of inWindow) {
-    const dayIndex = Math.floor((tx.timestampSeconds - windowStart) / SECONDS_PER_DAY);
-    if (dayIndex >= 0 && dayIndex < TRAILING_WINDOW_DAYS) {
+    const daysAgo = Math.floor((nowSeconds - tx.timestampSeconds) / SECONDS_PER_DAY);
+    if (daysAgo >= 0 && daysAgo < TRAILING_WINDOW_DAYS) {
       // Precision loss converting bigint USD to Number is acceptable here:
       // this feeds a 0-100 heuristic score, never a monetary amount.
-      dailyTotals[dayIndex] += Number(tx.amountUSD) / 1_000_000;
+      dailyTotals[daysAgo] += Number(tx.amountUSD) / 1_000_000;
     }
   }
 
