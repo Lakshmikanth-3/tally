@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tally/seam": "workspace:*"
+    "@tally/seam": "file:../seam"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
