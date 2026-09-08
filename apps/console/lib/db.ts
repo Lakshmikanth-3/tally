@@ -18,7 +18,8 @@ export function getDb(): Database.Database {
       created_at INTEGER NOT NULL,
       stripe_account_id TEXT,
       stripe_access_token TEXT,
-      stripe_connected_at INTEGER
+      stripe_connected_at INTEGER,
+      is_demo INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS transactions (
@@ -36,6 +37,7 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, 'businesses', 'stripe_account_id', 'TEXT');
   addColumnIfMissing(db, 'businesses', 'stripe_access_token', 'TEXT');
   addColumnIfMissing(db, 'businesses', 'stripe_connected_at', 'INTEGER');
+  addColumnIfMissing(db, 'businesses', 'is_demo', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'transactions', 'source', "TEXT NOT NULL DEFAULT 'manual'");
   addColumnIfMissing(db, 'transactions', 'stripe_charge_id', 'TEXT');
 

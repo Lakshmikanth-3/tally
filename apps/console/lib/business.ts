@@ -7,6 +7,7 @@ export interface Business {
   issuerId: string;
   name: string;
   createdAt: number;
+  isDemo: boolean;
 }
 
 function slugify(name: string): string {
@@ -26,15 +27,39 @@ export function registerBusiness(name: string): Business {
 
   getDb().prepare('INSERT INTO businesses (issuer_id, name, created_at) VALUES (?, ?, ?)').run(issuerId, trimmed, createdAt);
 
-  return { issuerId, name: trimmed, createdAt };
+  return { issuerId, name: trimmed, createdAt, isDemo: false };
 }
 
 export function getBusiness(issuerId: string): Business | undefined {
-  const row = getDb().prepare('SELECT issuer_id, name, created_at FROM businesses WHERE issuer_id = ?').get(issuerId) as
-    | { issuer_id: string; name: string; created_at: number }
+  const row = getDb().prepare('SELECT issuer_id, name, created_at, is_demo FROM businesses WHERE issuer_id = ?').get(issuerId) as
+    | { issuer_id: string; name: string; created_at: number; is_demo: number }
     | undefined;
   if (!row) return undefined;
-  return { issuerId: row.issuer_id, name: row.name, createdAt: row.created_at };
+  return { issuerId: row.issuer_id, name: row.name, createdAt: row.created_at, isDemo: Boolean(row.is_demo) };
+}
+
+/// Marks a business as using clearly-disclosed synthetic/demo revenue data
+/// rather than a real business's real numbers — see seedDemoTransactions.
+/// Never set on a business with a connected payment processor or real
+/// manually-submitted history; this is for a small number of explicitly
+/// created demo businesses only, surfaced honestly in the UI wherever their
+/// revenue is shown.
+export function markBusinessAsDemo(issuerId: string): void {
+  getDb().prepare('UPDATE businesses SET is_demo = 1 WHERE issuer_id = ?').run(issuerId);
+}
+
+/// Seeds clearly-labeled synthetic transactions (source='synthetic-demo')
+/// for a demo business — bypasses submitTransaction's normal "now" default
+/// so callers can supply real historical-looking dates for a coherent
+/// multi-month synthetic history. Only ever call this for a business also
+/// marked via markBusinessAsDemo, so the UI disclosure and the data stay in
+/// sync — see scripts/seed-demo-business.ts for the one real caller.
+export function seedDemoTransactions(issuerId: string, transactions: { amountUSD: bigint; timestampSeconds: number }[]): void {
+  const insert = getDb().prepare("INSERT INTO transactions (issuer_id, amount_usd, timestamp_seconds, source) VALUES (?, ?, ?, 'synthetic-demo')");
+  const insertMany = getDb().transaction((rows: typeof transactions) => {
+    for (const tx of rows) insert.run(issuerId, tx.amountUSD.toString(), tx.timestampSeconds);
+  });
+  insertMany(transactions);
 }
 
 /// Thrown when a business with a connected payment processor attempts

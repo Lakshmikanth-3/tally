@@ -28,6 +28,12 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
       <h1>{business.name}</h1>
       <p>Issuer ID: {business.issuerId}</p>
 
+      {business.isDemo && (
+        <p style={{ fontSize: '0.85em', color: '#946200', background: '#fff8e6', border: '1px solid #f0dca0', borderRadius: 4, padding: '4px 10px', display: 'inline-block' }}>
+          Synthetic demo data — not a real business
+        </p>
+      )}
+
       <section>
         <h2>Revenue source</h2>
         {stripeAccountId ? (
