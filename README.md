@@ -18,9 +18,43 @@ Corrado's Deli is the one deliberate exception, used to demonstrate the full iss
 
 Everything downstream of that revenue number — the Chainlink CRE workflow's underwriting logic, the Hedera bond issuance, the subgraph indexing, the no-keeper coupon/redemption settlement — runs identically and for real, whether the input revenue came from a real Stripe account or this one disclosed synthetic seed.
 
+## Real infrastructure, live and verified
+
+- **Bond issuance and redemption** — both run through a real headless-browser
+  signer against the real Asset Tokenization Studio Factory contract on
+  Hedera testnet. Verified live end-to-end: a bond is created (`Bond.create`
+  + `FixedRate.setRate`), its required roles (rate-manager, control-list,
+  maturity-redeemer) are granted, and — at maturity — a real self-signed
+  verifiable credential grants internal KYC and `Bond.fullRedeemAtMaturity`
+  actually redeems it. This is real signing, real access-control gates, and
+  real on-chain transactions, not a simulated mechanism.
+- **No-keeper settlement** — coupon payments and redemption anchoring are
+  armed as real Hedera `ScheduleCreateTransaction`s with
+  `setWaitForExpiry(true)`. Verified live: an armed schedule executes itself
+  at expiry with zero bot/cron infrastructure, and the resulting on-time/late
+  status is derived from the mirror node's real consensus timestamps, never
+  hand-set.
+- **On-chain infra** — `SettlementAnchor` + `SecondaryMarket` (Foundry, 6
+  passing tests) deployed to both Hedera testnet (`0.0.10410671` /
+  `0.0.10410672`, the real product deployment) and Ethereum Sepolia (same
+  deterministic addresses) — the Sepolia copy exists solely because Subgraph
+  Studio doesn't support Hedera as an indexable network (see
+  `FEEDBACK/THEGRAPH.md`).
+- **Subgraph** — deployed live: https://thegraph.com/studio/subgraph/tally-register,
+  indexing lifecycle events from the Sepolia deployment above.
+- **Chainlink CRE confidential workflow** (`cre/tally-cre`) — fetches a
+  business's real revenue from the console's API inside a TEE, applies real
+  underwriting logic, and returns only the verdict. Verified via
+  `cre workflow simulate`; live deployment is pending Chainlink's
+  Confidential Workflows private-beta access review (see
+  `FEEDBACK/CHAINLINK.md`).
+- **Console UI** — Next.js app for business registration, Stripe Connect,
+  and the underwriting/bond-issuance flow, styled and wired to all of the
+  above.
+
 ## Repository layout
 
-- `apps/console` — the Next.js product surface (business registration, revenue, Stripe Connect)
+- `apps/console` — the Next.js product surface (business registration, revenue, Stripe Connect, bond issuance UI)
 - `packages/seam` — shared types and fixed-point money helpers
 - `packages/underwriting` — revenue-snapshot computation and coupon pricing policy
 - `packages/ats-client` — Hedera Asset Tokenization Studio SDK client, including a real headless-browser signer (`browser-runner/`) since the SDK requires a real browser context to sign transactions
@@ -28,3 +62,4 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
 - `contracts` — `SettlementAnchor` and `SecondaryMarket` (Foundry)
 - `subgraph` — The Graph subgraph indexing lifecycle events
 - `cre/tally-cre` — the Chainlink CRE confidential underwriting workflow
+- `FEEDBACK/` — real, specific feedback for each sponsor (Hedera, Chainlink, The Graph), grounded in issues actually hit building this
