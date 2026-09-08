@@ -66,6 +66,12 @@ importers:
       '@hashgraph/sdk':
         specifier: 2.64.5
         version: 2.64.5(bn.js@5.2.5)(react-native@0.87.1(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8))
+      '@terminal3/ecdsa_vc':
+        specifier: 0.1.16
+        version: 0.1.16
+      '@terminal3/vc_core':
+        specifier: 0.0.19
+        version: 0.0.19
       ethers:
         specifier: ^6.15.0
         version: 6.17.0
@@ -73,6 +79,9 @@ importers:
         specifier: 1.63.0
         version: 1.63.0
     devDependencies:
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
       esbuild:
         specifier: ^0.21.5
         version: 0.21.5
@@ -8207,7 +8216,7 @@ snapshots:
       '@noble/hashes': 1.7.0
       '@walletconnect/safe-json': 1.0.2
       '@walletconnect/time': 1.0.2
-      uint8arrays: 3.1.0
+      uint8arrays: 3.1.1
 
   '@walletconnect/safe-json@1.0.2':
     dependencies:
