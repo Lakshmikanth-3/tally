@@ -96,7 +96,9 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
       )}
 
       {bond && bond.status === 'issued' && (
-        <dl>
+        <>
+        <span className="badge-success">Issued on Hedera testnet</span>
+        <dl className="details">
           <dt>Coupon rate</dt>
           <dd>{((bond.couponBps ?? 0) / 100).toFixed(2)}%</dd>
           <dt>Face value</dt>
@@ -120,6 +122,7 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
           <dt>Maturity</dt>
           <dd>{bond.maturityDateSeconds ? formatDate(bond.maturityDateSeconds) : '—'}</dd>
         </dl>
+        </>
       )}
 
       {error && <p role="alert">{error}</p>}

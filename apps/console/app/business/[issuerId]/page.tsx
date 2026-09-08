@@ -29,11 +29,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
       <h1>{business.name}</h1>
       <p>Issuer ID: {business.issuerId}</p>
 
-      {business.isDemo && (
-        <p style={{ fontSize: '0.85em', color: '#946200', background: '#fff8e6', border: '1px solid #f0dca0', borderRadius: 4, padding: '4px 10px', display: 'inline-block' }}>
-          Synthetic demo data — not a real business
-        </p>
-      )}
+      {business.isDemo && <span className="badge">Synthetic demo data — not a real business</span>}
 
       <section>
         <h2>Revenue source</h2>
@@ -42,7 +38,9 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
         ) : (
           <>
             <p>No payment processor connected yet.</p>
-            <a href={`/api/business/${issuerId}/stripe/authorize`}>Connect Stripe</a>
+            <a className="button-link" href={`/api/business/${issuerId}/stripe/authorize`}>
+              Connect Stripe
+            </a>
           </>
         )}
       </section>
@@ -53,11 +51,20 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
           <p role="alert">Could not load live revenue: {revenueError}</p>
         ) : (
           revenue && (
-            <>
-              <p>{formatMicrosUSD(revenue.trailing90dTotalUSD)}</p>
-              <p>Volatility score: {revenue.volatilityScore} / 100</p>
-              <p>History: {revenue.historyDays} days</p>
-            </>
+            <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+              <div>
+                <p className="stat-label">Revenue</p>
+                <p className="stat">{formatMicrosUSD(revenue.trailing90dTotalUSD)}</p>
+              </div>
+              <div>
+                <p className="stat-label">Volatility</p>
+                <p className="stat">{revenue.volatilityScore} / 100</p>
+              </div>
+              <div>
+                <p className="stat-label">History</p>
+                <p className="stat">{revenue.historyDays}d</p>
+              </div>
+            </div>
           )
         )}
       </section>

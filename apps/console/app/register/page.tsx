@@ -32,14 +32,17 @@ export default function RegisterPage() {
   return (
     <main>
       <h1>Register your business</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="name">Business name</label>
-        <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Registering…' : 'Register'}
-        </button>
-      </form>
-      {error && <p role="alert">{error}</p>}
+      <p>Tally underwrites off your business's real revenue — connect a payment processor after registering.</p>
+      <section>
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="name">Business name</label>
+          <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'Registering…' : 'Register'}
+          </button>
+        </form>
+        {error && <p role="alert">{error}</p>}
+      </section>
     </main>
   );
 }
