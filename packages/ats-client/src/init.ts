@@ -2,14 +2,43 @@ import { ConnectRequest, InitializationRequest, Network, SupportedWallets } from
 
 type ImplicitNetworkConfig = ConstructorParameters<typeof InitializationRequest>[0];
 
-// MirrorNode/JsonRpcRelay are plain value classes (no `.validate()`, unlike
-// the ValidatedRequest classes below) but aren't exported from the package
-// root — a structurally-matching plain object works identically at runtime.
+// MirrorNode/JsonRpcRelay/Factories/Resolvers/MirrorNodes/JsonRpcRelays are
+// all plain value classes (no `.validate()`, unlike the ValidatedRequest
+// classes below) but aren't exported from the package root — a
+// structurally-matching plain object works identically at runtime.
 function mirrorNode(baseUrl: string): ImplicitNetworkConfig['mirrorNode'] {
   return { baseUrl } as ImplicitNetworkConfig['mirrorNode'];
 }
 function rpcNode(baseUrl: string): ImplicitNetworkConfig['rpcNode'] {
   return { baseUrl } as ImplicitNetworkConfig['rpcNode'];
+}
+
+/// [VERIFIED via a real failed attempt] The real MetaMask pairing flow
+/// (MetamaskService.setMetamaskNetwork, run during Network.connect) looks up
+/// the per-environment mirror/rpc/factory/resolver config supplied here by
+/// matching the wallet's real chainId (296 for testnet) against
+/// HederaNetworks — NOT the flat single-environment `configuration` field
+/// below, which only matters before a wallet is paired. Omitting these
+/// multi-environment arrays doesn't leave the old config in place; pairing
+/// actively RESETS the mirror node adapter's URL to an empty string,
+/// breaking every mirror lookup that follows (confirmed live: "account
+/// could not be retrieved from mirror error: Value \"\" does not have the
+/// correct format").
+function multiEnvironmentConfig(): Pick<ImplicitNetworkConfig, 'mirrorNodes' | 'jsonRpcRelays' | 'factories' | 'resolvers'> {
+  return {
+    mirrorNodes: {
+      nodes: [{ mirrorNode: mirrorNode(ATS_TESTNET.mirrorNodeUrl), environment: ATS_TESTNET.network }],
+    } as ImplicitNetworkConfig['mirrorNodes'],
+    jsonRpcRelays: {
+      nodes: [{ jsonRpcRelay: rpcNode(ATS_TESTNET.rpcNodeUrl), environment: ATS_TESTNET.network }],
+    } as ImplicitNetworkConfig['jsonRpcRelays'],
+    factories: {
+      factories: [{ factory: ATS_TESTNET.factoryAddress, environment: ATS_TESTNET.network }],
+    } as ImplicitNetworkConfig['factories'],
+    resolvers: {
+      resolvers: [{ resolver: ATS_TESTNET.resolverAddress, environment: ATS_TESTNET.network }],
+    } as ImplicitNetworkConfig['resolvers'],
+  };
 }
 
 // Real, live Hedera testnet deployment of Asset Tokenization Studio's
@@ -45,16 +74,27 @@ async function ensureInitialized(): Promise<void> {
         factoryAddress: ATS_TESTNET.factoryAddress,
         resolverAddress: ATS_TESTNET.resolverAddress,
       },
+      ...multiEnvironmentConfig(),
     }),
   );
   initialized = true;
 }
 
-/// Connects a backend (non-browser) account to the SDK, using the same
-/// `debug: true` + embedded-private-key `Account` pattern ATS's own
-/// integration test suite uses to sign without a MetaMask browser session
-/// (see packages/ats/sdk/__tests__/config.ts and MetamaskService.register
-/// in the upstream repo — `debug: true` skips the window.ethereum check).
+/// Connects to the SDK inside the real browser session (see
+/// packages/ats-client/browser-runner/ — this only ever runs inside a real
+/// Chromium tab with a real EIP-1193 `window.ethereum` injected there).
+///
+/// [VERIFIED via a real failed attempt] `debug: true` is NOT used here,
+/// deliberately: it skips MetamaskService.connectMetamask() entirely,
+/// which is the only place `signerOrProvider` actually gets set to a real
+/// ethers Signer (via `new BrowserProvider(ethereum).getSigner()`). With
+/// `debug: true`, every later contract call fails with "contract runner
+/// does not support sending transactions" because the adapter only has a
+/// read-only Provider, never a Signer. `debug: true` only makes sense when
+/// there is no real `window.ethereum` to pair with at all (e.g. ATS's own
+/// test suite, run under a DOM-like test environment) — since our browser
+/// session provides a real, if custom, EIP-1193 provider, the ordinary
+/// pairing path is the correct one, not a bypass.
 export async function connectAtsBackend(creds: AtsCredentials) {
   await ensureInitialized();
 
@@ -64,7 +104,6 @@ export async function connectAtsBackend(creds: AtsCredentials) {
       mirrorNode: mirrorNode(ATS_TESTNET.mirrorNodeUrl),
       rpcNode: rpcNode(ATS_TESTNET.rpcNodeUrl),
       wallet: SupportedWallets.METAMASK,
-      debug: true,
       account: {
         accountId: creds.accountId,
         evmAddress: creds.evmAddress,
