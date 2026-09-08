@@ -17,6 +17,9 @@ importers:
 
   apps/console:
     dependencies:
+      '@tally/ats-client':
+        specifier: workspace:*
+        version: link:../../packages/ats-client
       '@tally/seam':
         specifier: workspace:*
         version: link:../../packages/seam

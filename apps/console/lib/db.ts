@@ -32,6 +32,26 @@ export function getDb(): Database.Database {
     );
 
     CREATE INDEX IF NOT EXISTS idx_transactions_issuer ON transactions(issuer_id);
+
+    CREATE TABLE IF NOT EXISTS bonds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      issuer_id TEXT NOT NULL REFERENCES businesses(issuer_id),
+      status TEXT NOT NULL, -- 'declined' | 'issued' | 'failed'
+      reason_code INTEGER,
+      coupon_bps INTEGER,
+      face_value_usd TEXT,
+      symbol TEXT,
+      isin TEXT,
+      bond_token_id TEXT,
+      evm_diamond_address TEXT,
+      transaction_id TEXT,
+      error_message TEXT,
+      starting_date_seconds INTEGER,
+      maturity_date_seconds INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bonds_issuer ON bonds(issuer_id);
   `);
 
   addColumnIfMissing(db, 'businesses', 'stripe_account_id', 'TEXT');

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getBusiness, getRevenueSnapshot, getStripeAccountId } from '@/lib/business';
+import BondPanel from './BondPanel';
 
 function formatMicrosUSD(micros: bigint): string {
   return (Number(micros) / 1_000_000).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -60,6 +61,8 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
           )
         )}
       </section>
+
+      <BondPanel issuerId={issuerId} />
     </main>
   );
 }

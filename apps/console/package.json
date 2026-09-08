@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tally/ats-client": "workspace:*",
     "@tally/seam": "workspace:*",
     "@tally/underwriting": "workspace:*",
     "better-sqlite3": "^11.3.0",
