@@ -1,5 +1,6 @@
 import { Bond, CreateBondFixedRateRequest } from '@hashgraph/asset-tokenization-sdk';
 import { ATS_TESTNET } from './init';
+import { resolveLatestBondConfigVersion } from './config-version';
 
 const USD_CURRENCY_BYTES3 = '0x555344'; // hex of ASCII "USD", per FormatValidation.checkBytes3Format
 
@@ -25,13 +26,9 @@ export interface IssuedBond {
 /// counterparty's transfer attempt against the resulting token genuinely
 /// reverts on-chain, which is what the demo's rejected-transfer moment
 /// (Part F.8 / SecondaryMarket.t.sol) actually proves against.
-///
-/// [VERIFY ON FIRST REAL CALL]: `configVersion` below is a placeholder (1) —
-/// confirm the actual latest registered Bond business-logic config version
-/// on the resolver at ATS_TESTNET.resolverAddress before relying on this;
-/// an outdated version will fail validation rather than silently succeed.
 export async function issueFixedRateBond(params: IssueBondParams): Promise<IssuedBond> {
   const rateDecimals = 2;
+  const configVersion = await resolveLatestBondConfigVersion();
 
   const result = await Bond.createFixedRate(
     new CreateBondFixedRateRequest({
@@ -58,7 +55,7 @@ export async function issueFixedRateBond(params: IssueBondParams): Promise<Issue
       isCountryControlListWhiteList: true,
       countries: '',
       configId: ATS_TESTNET.bondConfigId,
-      configVersion: 1,
+      configVersion,
       rate: params.couponBps,
       rateDecimals,
     }),
