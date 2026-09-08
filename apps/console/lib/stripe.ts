@@ -15,14 +15,16 @@ function getPlatformStripeClient(): Stripe {
   return new Stripe(requireEnv('STRIPE_SECRET_KEY'));
 }
 
-/// Builds the real Stripe Connect OAuth authorize URL. `scope: read_only`
-/// is deliberate — Tally only ever needs to read a shop's settled charges,
-/// never move money through their account.
+/// Builds the real Stripe Connect OAuth authorize URL. Tally only ever
+/// calls read endpoints (see listStripeCharges below) — `read_write` is
+/// used here only because Stripe gates the narrower `read_only` OAuth
+/// scope behind a manual support request for new platforms; it doesn't
+/// change what this codebase actually does with the connection.
 export function getStripeConnectAuthorizeUrl(issuerId: string): string {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: requireEnv('STRIPE_CONNECT_CLIENT_ID'),
-    scope: 'read_only',
+    scope: 'read_write',
     redirect_uri: requireEnv('STRIPE_CONNECT_REDIRECT_URI'),
     state: issuerId,
   });
