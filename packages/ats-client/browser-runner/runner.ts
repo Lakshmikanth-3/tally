@@ -7,6 +7,15 @@ import { join } from 'node:path';
 export interface CustodianKey {
   privateKeyHex: string; // real ECDSA private key — Tally's own custodian key, never the business's
   rpcUrl: string; // e.g. https://testnet.hashio.io/api
+  /// Absolute path to the built browser-runner/dist/entry.js. Defaults to a
+  /// path next to this file, which is correct when this module runs as its
+  /// own file (tsx scratch scripts, this package's own tests). A caller
+  /// whose bundler concatenates multiple source files into one output chunk
+  /// per route (e.g. Next.js/webpack) must pass this explicitly — inside
+  /// such a chunk, `__dirname` resolves to the chunk's own output location,
+  /// not this file's real directory, so the default silently breaks
+  /// (confirmed live: ENOENT looking for dist/entry.js under .next/server/).
+  bundlePath?: string;
 }
 
 /// The EIP-1193 provider injected as `window.ethereum` before any page
@@ -125,7 +134,7 @@ export async function startBrowserSignerSession(key: CustodianKey): Promise<Brow
   await page.exposeFunction('__tallyBridge', (argsJson: string) => bridgeHandler(provider, wallet, argsJson));
   await page.addInitScript(INIT_SCRIPT);
 
-  const bundlePath = join(__dirname, 'dist', 'entry.js');
+  const bundlePath = key.bundlePath ?? join(__dirname, 'dist', 'entry.js');
   const bundleSource = readFileSync(bundlePath, 'utf8');
   const { server, url } = await serveBundle(bundleSource);
 
