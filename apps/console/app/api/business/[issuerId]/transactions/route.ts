@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseUsdToMicros } from '@tally/seam';
-import { getBusiness, submitTransaction } from '@/lib/business';
+import { getBusiness, ProcessorConnectedError, submitTransaction } from '@/lib/business';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
@@ -21,6 +21,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ iss
     submitTransaction(issuerId, amountUSD, timestampSeconds);
     return NextResponse.json({ issuerId, amountUSD: amountUSD.toString(), timestampSeconds }, { status: 201 });
   } catch (err) {
+    if (err instanceof ProcessorConnectedError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
 }

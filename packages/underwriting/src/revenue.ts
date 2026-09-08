@@ -41,7 +41,7 @@ function computeVolatilityScore(inWindow: RawTransaction[], nowSeconds: number):
     if (daysAgo >= 0 && daysAgo < TRAILING_WINDOW_DAYS) {
       // Precision loss converting bigint USD to Number is acceptable here:
       // this feeds a 0-100 heuristic score, never a monetary amount.
-      dailyTotals[daysAgo] += Number(tx.amountUSD) / 1_000_000;
+      dailyTotals[daysAgo] = (dailyTotals[daysAgo] ?? 0) + Number(tx.amountUSD) / 1_000_000;
     }
   }
 

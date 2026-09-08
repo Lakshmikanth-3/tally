@@ -24,7 +24,7 @@ export function parseUsdToMicros(input: string): bigint {
   if (!DECIMAL_USD_PATTERN.test(trimmed)) {
     throw new Error(`invalid USD amount: ${JSON.stringify(input)}`);
   }
-  const [wholePart, fractionPart = ''] = trimmed.split('.');
+  const [wholePart = '', fractionPart = ''] = trimmed.split('.');
   const paddedFraction = fractionPart.padEnd(Number(USD_DECIMALS), '0');
   return BigInt(wholePart) * USD_SCALE + BigInt(paddedFraction);
 }

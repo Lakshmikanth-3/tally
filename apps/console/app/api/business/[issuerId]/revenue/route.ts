@@ -24,11 +24,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ issu
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
-  const snapshot = getRevenueSnapshot(issuerId);
-  return NextResponse.json({
-    issuerId: snapshot.issuerId,
-    trailing90dTotalUSD: snapshot.trailing90dTotalUSD.toString(),
-    volatilityScore: snapshot.volatilityScore,
-    historyDays: snapshot.historyDays,
-  });
+  try {
+    const snapshot = await getRevenueSnapshot(issuerId);
+    return NextResponse.json({
+      issuerId: snapshot.issuerId,
+      trailing90dTotalUSD: snapshot.trailing90dTotalUSD.toString(),
+      volatilityScore: snapshot.volatilityScore,
+      historyDays: snapshot.historyDays,
+    });
+  } catch (err) {
+    // Surfaces honestly (e.g. a live Stripe pull failing) rather than the
+    // CRE workflow silently getting a stale or fabricated snapshot.
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+  }
 }

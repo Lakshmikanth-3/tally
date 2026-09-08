@@ -28,3 +28,4 @@ cre/*/*/.cre_build_tmp.js
 # OS
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
