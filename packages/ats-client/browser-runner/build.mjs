@@ -8,12 +8,27 @@
 //   - dotenv / winston / winston-daily-rotate-file: server-only logging and
 //     .env loading the SDK's index.ts pulls in unconditionally at import
 //     time; meaningless inside a browser tab.
-//   - @hashgraph/hedera-custodians-integration / @terminal3/verify_vc: the
-//     DFNS/Fireblocks/AWS-KMS custodial adapters and VC-verification code
-//     path, eagerly instantiated by Injectable.ts regardless of which
-//     wallet type is actually used. Tally only ever uses METAMASK (see
-//     packages/ats-client/src/init.ts) so these are genuinely dead code —
-//     but they still get bundled unless stubbed.
+//   - @hashgraph/hedera-custodians-integration: the DFNS/Fireblocks/AWS-KMS
+//     custodial adapters, eagerly instantiated by Injectable.ts regardless
+//     of which wallet type is actually used. Tally only ever uses METAMASK
+//     (see packages/ats-client/src/init.ts) so this is genuinely dead code
+//     — but it still gets bundled unless stubbed.
+//   - @terminal3/verify_vc: real and used (kyc.ts's grantInternalKyc goes
+//     through the SDK's real Kyc.grantKyc, which verifies the credential
+//     with it) but the real package eagerly requires @terminal3/bbs_vc,
+//     whose BBS+ implementation goes through a native Node addon
+//     (@mattrglobal/node-bbs-signatures) with no browser build. Tally only
+//     ever issues/verifies EcdsaSecp256k1Signature2019 credentials, so this
+//     aliases to a real re-implementation of the same verifyVc export that
+//     delegates the ECDSA branch to the real @terminal3/ecdsa_vc and only
+//     drops the BBS+ branch Tally never exercises (see node-shims/
+//     terminal3-verify-vc-ecdsa-only.js for the full justification).
+//   - crypto / Buffer: the KYC verifiable-credential chain
+//     (@terminal3/vc_core) uses Node's `crypto.getRandomValues` and the
+//     ambient `Buffer` global — both real Web APIs with a real browser
+//     equivalent (globalThis.crypto.getRandomValues) or a real, standard
+//     polyfill (the `buffer` package), not a Node-only capability with no
+//     browser analog. See node-shims/crypto.js and buffer-global.js.
 //   - @hiero-ledger/sdk / @hashgraph/sdk: both packages ship a real,
 //     dedicated browser build (`lib/browser.js`) via their package.json's
 //     "browser" field, but esbuild doesn't apply that remap when a
@@ -54,6 +69,10 @@ await build({
   platform: 'browser',
   format: 'iife',
   outfile: join(__dirname, 'dist', 'entry.js'),
+  // Real Buffer polyfill (see node-shims/buffer-global.js) — the KYC
+  // verifiable-credential chain (@terminal3/vc_core) uses the ambient
+  // Node `Buffer` global, absent in a real browser.
+  inject: [join(__dirname, 'node-shims', 'buffer-global.js')],
   define: {
     'process.env.NODE_ENV': '"production"',
     // The SDK's own Injectable.isWeb() checks `global.window` — `global` is
@@ -62,11 +81,12 @@ await build({
     global: 'globalThis',
   },
   alias: {
+    crypto: join(__dirname, 'node-shims', 'crypto.js'),
     dotenv: join(__dirname, 'node-shims', 'dotenv.js'),
     winston: join(__dirname, 'node-shims', 'winston.js'),
     'winston-daily-rotate-file': join(__dirname, 'node-shims', 'winston-daily-rotate-file.js'),
     '@hashgraph/hedera-custodians-integration': join(__dirname, 'node-shims', 'unused-custodial-sdk.js'),
-    '@terminal3/verify_vc': join(__dirname, 'node-shims', 'unused-custodial-sdk.js'),
+    '@terminal3/verify_vc': join(__dirname, 'node-shims', 'terminal3-verify-vc-ecdsa-only.js'),
     '@hiero-ledger/sdk': realBrowserEntry('@hiero-ledger/sdk', '2.79.0'),
     '@hashgraph/sdk': realBrowserEntry('@hashgraph/sdk', '2.64.5'),
   },
