@@ -1,6 +1,7 @@
-import { Bond, CreateBondRequest, FixedRate, Role, RoleRequest, SetRateRequest } from '@hashgraph/asset-tokenization-sdk';
+import { Bond, CreateBondRequest, FixedRate, SetRateRequest } from '@hashgraph/asset-tokenization-sdk';
 import { ATS_TESTNET } from './init';
 import { resolveLatestBondConfigVersion } from './config-version';
+import { ensureRoleGranted } from './roles';
 
 const USD_CURRENCY_BYTES3 = '0x555344'; // hex of ASCII "USD", per FormatValidation.checkBytes3Format
 
@@ -96,13 +97,7 @@ export async function issueFixedRateBond(params: IssueBondParams): Promise<Issue
   // separate _INTEREST_RATE_MANAGER_ROLE, which nothing grants
   // automatically. Confirmed live: FixedRate.setRate reverted with "doesn't
   // have the needed role (0xfa80c71f...)", which is this exact role hash.
-  await Role.grantRole(
-    new RoleRequest({
-      securityId: createResult.security.diamondAddress,
-      targetId: params.issuerEvmAddress,
-      role: INTEREST_RATE_MANAGER_ROLE,
-    }),
-  );
+  await ensureRoleGranted(createResult.security.diamondAddress, params.issuerEvmAddress, INTEREST_RATE_MANAGER_ROLE);
 
   await FixedRate.setRate(
     new SetRateRequest({
