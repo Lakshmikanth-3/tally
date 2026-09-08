@@ -108,8 +108,20 @@ export async function issueFixedRateBond(params: IssueBondParams): Promise<Issue
   );
 
   return {
-    bondTokenId: createResult.security.diamondAddress,
-    evmDiamondAddress: createResult.security.evmDiamondAddress,
+    bondTokenId: idToString(createResult.security.diamondAddress),
+    evmDiamondAddress: idToString(createResult.security.evmDiamondAddress),
     transactionId: createResult.transactionId,
   };
+}
+
+// [VERIFIED via a real live attempt] SecurityViewModel.d.ts declares
+// diamondAddress/evmDiamondAddress as `string`, but Bond.create's real
+// runtime response is a HederaId-shaped object ({ value: string }) for
+// both — confirmed live: the raw values came back as
+// {"value":"0.0.10425260"} and {"value":"0x622282..."}, not plain strings.
+// The SDK's own internal calls (Role.grantRole, FixedRate.setRate above)
+// tolerate either shape, but IssuedBond's declared `string` type should be
+// honest for every other caller.
+function idToString(id: string | { value: string }): string {
+  return typeof id === 'string' ? id : id.value;
 }

@@ -68,7 +68,7 @@ async function main() {
     console.log('issue result:', JSON.stringify(issueResult, null, 2));
     if (!issueResult.ok) return;
 
-    const bondTokenId = (issueResult.res as any).bondTokenId.value as string;
+    const bondTokenId = (issueResult.res as any).bondTokenId as string;
     const waitSeconds = maturitySeconds - Math.floor(Date.now() / 1000) + 15;
     console.log(`Waiting ${waitSeconds}s for real maturity to pass...`);
     await sleep(Math.max(0, waitSeconds) * 1000);
