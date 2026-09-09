@@ -81,12 +81,32 @@ already-completed** example instead — narrate it as real, not staged:
 ## 6. The public performance register (30s)
 
 Open the subgraph's Studio query playground
-(https://thegraph.com/studio/subgraph/tally-register) and run a query for
-the issuer's `LifecycleEvent`s. Point out this is querying a real deployed
-subgraph indexing real anchored on-chain events (mirrored onto Sepolia for
-indexing — see `FEEDBACK/THEGRAPH.md` for why) — this is the "priced in
-public" half of the pitch: any future lender can see an issuer's real
-on-time repayment history before extending credit again.
+(https://thegraph.com/studio/subgraph/tally-register) and paste this
+(verified live before recording — don't type it from memory on camera):
+
+```graphql
+{
+  lifecycleEvents(first: 10, orderBy: timestamp, orderDirection: desc) {
+    kind
+    timestamp
+    onTime
+    hcsTxId
+    bond { issuer }
+  }
+  issuerStandings {
+    id
+    bondsIssued
+    couponsOnTime
+    couponsLate
+  }
+}
+```
+
+Point out this is querying a real deployed subgraph indexing real anchored
+on-chain events (mirrored onto Sepolia for indexing — see
+`FEEDBACK/THEGRAPH.md` for why) — this is the "priced in public" half of the
+pitch: any future lender can see an issuer's real on-time repayment history
+before extending credit again.
 
 ## 7. Close (15s)
 
