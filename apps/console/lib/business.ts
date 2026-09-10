@@ -38,6 +38,87 @@ export function getBusiness(issuerId: string): Business | undefined {
   return { issuerId: row.issuer_id, name: row.name, createdAt: row.created_at, isDemo: Boolean(row.is_demo) };
 }
 
+export interface BusinessSummary extends Business {
+  stripeConnected: boolean;
+  bondStatus: 'none' | 'declined' | 'issued' | 'failed';
+  couponBps: number | null;
+  bondTokenId: string | null;
+}
+
+/// All registered businesses, newest first, each with its real Stripe
+/// connection state and latest real bond attempt (if any) — for the
+/// dashboard. One real query per call, no cached/derived fixture.
+export function listAllBusinesses(): BusinessSummary[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT
+         b.issuer_id, b.name, b.created_at, b.is_demo, b.stripe_account_id,
+         latest.status as bond_status, latest.coupon_bps, latest.bond_token_id
+       FROM businesses b
+       LEFT JOIN (
+         SELECT bonds.*
+         FROM bonds
+         INNER JOIN (
+           SELECT issuer_id, MAX(created_at) as max_created_at
+           FROM bonds
+           GROUP BY issuer_id
+         ) latest_per_issuer
+         ON bonds.issuer_id = latest_per_issuer.issuer_id AND bonds.created_at = latest_per_issuer.max_created_at
+       ) latest
+       ON latest.issuer_id = b.issuer_id
+       ORDER BY b.created_at DESC`,
+    )
+    .all() as {
+    issuer_id: string;
+    name: string;
+    created_at: number;
+    is_demo: number;
+    stripe_account_id: string | null;
+    bond_status: string | null;
+    coupon_bps: number | null;
+    bond_token_id: string | null;
+  }[];
+
+  return rows.map((r) => ({
+    issuerId: r.issuer_id,
+    name: r.name,
+    createdAt: r.created_at,
+    isDemo: Boolean(r.is_demo),
+    stripeConnected: Boolean(r.stripe_account_id),
+    bondStatus: (r.bond_status as BusinessSummary['bondStatus']) ?? 'none',
+    couponBps: r.coupon_bps,
+    bondTokenId: r.bond_token_id,
+  }));
+}
+
+export interface PlatformStats {
+  totalBusinesses: number;
+  bondsIssued: number;
+  totalFaceValueUsdMicros: string;
+  totalTransactions: number;
+}
+
+/// Real, aggregate platform stats for the landing page / dashboard — every
+/// number a direct COUNT/SUM over real tables, never a hardcoded figure.
+export function getPlatformStats(): PlatformStats {
+  const db = getDb();
+  const totalBusinesses = (db.prepare('SELECT COUNT(*) as c FROM businesses').get() as { c: number }).c;
+  const bondsIssued = (db.prepare("SELECT COUNT(*) as c FROM bonds WHERE status = 'issued'").get() as { c: number }).c;
+  const totalFaceValue = (
+    db.prepare("SELECT COALESCE(SUM(CAST(face_value_usd AS INTEGER)), 0) as s FROM bonds WHERE status = 'issued'").get() as {
+      s: number;
+    }
+  ).s;
+  const totalTransactions = (db.prepare('SELECT COUNT(*) as c FROM transactions').get() as { c: number }).c;
+
+  return {
+    totalBusinesses,
+    bondsIssued,
+    totalFaceValueUsdMicros: (BigInt(totalFaceValue) * 1_000_000n).toString(),
+    totalTransactions,
+  };
+}
+
 /// Marks a business as using clearly-disclosed synthetic/demo revenue data
 /// rather than a real business's real numbers — see seedDemoTransactions.
 /// Never set on a business with a connected payment processor or real

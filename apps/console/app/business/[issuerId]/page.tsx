@@ -29,12 +29,14 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
 
   return (
     <main>
-      <h1>{business.name}</h1>
-      <p>Issuer ID: {business.issuerId}</p>
+      <div className="fade-up" style={{ ['--stagger' as string]: 0 }}>
+        <h1>{business.name}</h1>
+        <p>Issuer ID: {business.issuerId}</p>
 
-      {business.isDemo && <span className="badge">Synthetic demo data — not a real business</span>}
+        {business.isDemo && <span className="badge">Synthetic demo data — not a real business</span>}
+      </div>
 
-      <section>
+      <section className="fade-up" style={{ ['--stagger' as string]: 1 }}>
         <h2>Revenue source</h2>
         {stripeAccountId ? (
           <>
@@ -62,7 +64,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
         )}
       </section>
 
-      <section>
+      <section className="fade-up" style={{ ['--stagger' as string]: 2 }}>
         <h2>Trailing 90-day revenue</h2>
         {revenueError ? (
           <p role="alert">Could not load live revenue: {revenueError}</p>

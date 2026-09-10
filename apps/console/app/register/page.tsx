@@ -31,12 +31,14 @@ export default function RegisterPage() {
 
   return (
     <main>
-      <h1>Register your business</h1>
-      <p>Tally underwrites off your business's real revenue — connect a payment processor after registering.</p>
-      <section>
+      <div className="fade-up" style={{ ['--stagger' as string]: 0 }}>
+        <h1>Register your business</h1>
+        <p>Tally underwrites off your business&apos;s real revenue — connect a payment processor after registering.</p>
+      </div>
+      <section className="fade-up" style={{ ['--stagger' as string]: 1 }}>
         <form onSubmit={handleSubmit}>
           <label htmlFor="name">Business name</label>
-          <input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input id="name" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           <button type="submit" disabled={submitting}>
             {submitting ? 'Registering…' : 'Register'}
           </button>
