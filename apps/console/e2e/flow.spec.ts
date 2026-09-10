@@ -110,6 +110,23 @@ test.describe('repayment register', () => {
   });
 });
 
+test.describe('pitch page', () => {
+  test('renders every slide with real live stats and proof links', async ({ page }) => {
+    await page.goto('/pitch');
+    await expect(page.getByRole('heading', { name: /verified revenue becomes a/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Every claim on this page is checkable' })).toBeVisible();
+
+    // Same live platform stats as the landing page — never a fixed placeholder number.
+    const stats = page.locator('.pitch-slide').first().locator('.stat-card .stat');
+    await expect(stats).toHaveCount(4);
+
+    const proofLinks = page.locator('.pitch-slide .proof-row');
+    for (const href of await proofLinks.evaluateAll((els) => els.map((e) => e.getAttribute('href')))) {
+      expect(href).toMatch(/^https:\/\/(hashscan\.io|sepolia\.etherscan\.io|thegraph\.com|api\.studio\.thegraph\.com)/);
+    }
+  });
+});
+
 test.describe('registration and underwriting', () => {
   // The issuance route imports the whole ATS/Playwright signer chain, so
   // its first compile in a dev server can take well over a minute. That's

@@ -12,6 +12,7 @@ export default function Nav() {
         <Link href="/market">Market</Link>
         <Link href="/register-lookup">Repayment register</Link>
         <Link href="/proof">Verify on-chain</Link>
+        <Link href="/pitch">Pitch</Link>
         <Link href="/register">Add a business</Link>
       </div>
     </nav>

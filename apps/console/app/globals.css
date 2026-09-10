@@ -893,6 +893,32 @@ label {
    Section headings
    ========================================================================== */
 
+.pitch-deck {
+  padding-bottom: 60px;
+}
+
+.pitch-slide {
+  padding: 44px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.pitch-slide:last-child {
+  border-bottom: none;
+}
+
+.pitch-slide-num {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 18px;
+}
+
+.pitch-slide-eyebrow {
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
