@@ -28,7 +28,8 @@ export function getDb(): Database.Database {
       amount_usd TEXT NOT NULL,
       timestamp_seconds INTEGER NOT NULL,
       source TEXT NOT NULL DEFAULT 'manual',
-      stripe_charge_id TEXT
+      stripe_charge_id TEXT,
+      stripe_invoice_id TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_transactions_issuer ON transactions(issuer_id);
@@ -60,11 +61,13 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, 'businesses', 'is_demo', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(db, 'transactions', 'source', "TEXT NOT NULL DEFAULT 'manual'");
   addColumnIfMissing(db, 'transactions', 'stripe_charge_id', 'TEXT');
+  addColumnIfMissing(db, 'transactions', 'stripe_invoice_id', 'TEXT');
 
   // SQLite unique indexes treat NULL as distinct from every other value, so
   // manual transactions (stripe_charge_id IS NULL) are unaffected — this
   // only prevents the same real Stripe charge from being upserted twice.
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_stripe_charge_id ON transactions(stripe_charge_id)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_stripe_invoice_id ON transactions(stripe_invoice_id)');
 
   return db;
 }
