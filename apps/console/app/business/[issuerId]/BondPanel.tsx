@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import PlaceOrderPanel from './PlaceOrderPanel';
 
 interface BondRecord {
   issuerId: string;
@@ -218,6 +219,7 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
             Coupon and redemption settlement run on their own real Hedera Scheduled Transaction schedule — not triggered
             by this button.
           </p>
+          <PlaceOrderPanel issuerId={issuerId} />
         </>
       )}
 

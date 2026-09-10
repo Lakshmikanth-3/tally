@@ -29,6 +29,9 @@ importers:
       better-sqlite3:
         specifier: ^11.3.0
         version: 11.10.0
+      ethers:
+        specifier: ^6.15.0
+        version: 6.17.0
       next:
         specifier: ^15.0.0
         version: 15.5.25(@playwright/test@1.63.0)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
