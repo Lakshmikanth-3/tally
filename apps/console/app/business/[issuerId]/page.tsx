@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { getBusiness, getRevenueSnapshot, getStripeAccountId } from '@/lib/business';
+import { isStripeTestMode } from '@/lib/stripe';
 import BondPanel from './BondPanel';
+import StripeTransactionsPanel from './StripeTransactionsPanel';
 
 function formatMicrosUSD(micros: bigint): string {
   return (Number(micros) / 1_000_000).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -12,6 +14,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
   if (!business) notFound();
 
   const stripeAccountId = getStripeAccountId(issuerId);
+  const testMode = isStripeTestMode();
 
   // getRevenueSnapshot syncs from Stripe first when connected — a real API
   // failure (e.g. platform credentials not configured yet) must surface as
@@ -34,7 +37,21 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
       <section>
         <h2>Revenue source</h2>
         {stripeAccountId ? (
-          <p>Connected to Stripe account {stripeAccountId}. Revenue below is pulled live from Stripe — not manually entered.</p>
+          <>
+            <p>
+              <span className="badge-success">✓ Stripe Connected</span>{' '}
+              {testMode && <span className="badge">TEST MODE</span>}
+            </p>
+            <p>
+              Connected to Stripe account {stripeAccountId}. Revenue below is pulled live from Stripe — not manually
+              entered.
+            </p>
+            {testMode && (
+              <p className="stat-label">
+                Data Source: <strong>Stripe Test Mode — synthetic/test transactions</strong>
+              </p>
+            )}
+          </>
         ) : (
           <>
             <p>No payment processor connected yet.</p>
@@ -68,6 +85,8 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
           )
         )}
       </section>
+
+      {stripeAccountId && <StripeTransactionsPanel issuerId={issuerId} canGenerate={testMode} />}
 
       <BondPanel issuerId={issuerId} />
     </main>

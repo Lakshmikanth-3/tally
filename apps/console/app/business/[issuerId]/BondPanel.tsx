@@ -33,6 +33,42 @@ function formatDate(seconds: number): string {
   return new Date(seconds * 1000).toLocaleString();
 }
 
+const PIPELINE_STEPS = [
+  'Revenue data collected',
+  'TALLY Revenue API',
+  'Chainlink CRE',
+  'Confidential TEE',
+  'Private underwriting',
+];
+
+/// Shows the real pipeline shape — never the raw revenue number, which
+/// never leaves the TEE. Rendered while a real underwriting call is
+/// in flight, and left visible (collapsed to its outcome) once it resolves.
+function Pipeline({ outcome }: { outcome: 'running' | 'approved' | 'declined' | 'failed' }) {
+  return (
+    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '8px 0 16px' }}>
+      {PIPELINE_STEPS.map((step, i) => (
+        <span key={step}>
+          {step}
+          {i < PIPELINE_STEPS.length - 1 && ' → '}
+        </span>
+      ))}
+      <br />
+      <em>Revenue processed privately inside Chainlink Confidential Workflow.</em>
+      {outcome === 'approved' && (
+        <>
+          <br />→ <strong style={{ color: 'var(--accent)' }}>APPROVED</strong>
+        </>
+      )}
+      {outcome === 'declined' && (
+        <>
+          <br />→ <strong style={{ color: 'var(--danger)' }}>DECLINED</strong>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function BondPanel({ issuerId }: { issuerId: string }) {
   const [bond, setBond] = useState<BondRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,35 +104,39 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
     <section>
       <h2>Underwriting &amp; bond</h2>
 
-      {!bond && (
+      {issuing && <Pipeline outcome="running" />}
+
+      {!bond && !issuing && (
         <>
           <p>No underwriting attempt yet.</p>
           <button onClick={handleIssue} disabled={issuing}>
-            {issuing ? 'Issuing on Hedera testnet — real transactions, ~15–30s…' : 'Run underwriting & issue bond'}
+            Run underwriting &amp; issue bond
           </button>
         </>
       )}
 
-      {bond && bond.status === 'declined' && (
+      {bond && bond.status === 'declined' && !issuing && (
         <>
+          <Pipeline outcome="declined" />
           <p role="alert">Declined: {REASON_LABELS[bond.reasonCode] ?? `reason code ${bond.reasonCode}`}</p>
           <button onClick={handleIssue} disabled={issuing}>
-            {issuing ? 'Re-checking…' : 'Re-run underwriting'}
+            Re-run underwriting
           </button>
         </>
       )}
 
-      {bond && bond.status === 'failed' && (
+      {bond && bond.status === 'failed' && !issuing && (
         <>
           <p role="alert">Issuance failed: {bond.errorMessage}</p>
           <button onClick={handleIssue} disabled={issuing}>
-            {issuing ? 'Retrying — real transactions, ~15–30s…' : 'Retry issuance'}
+            Retry issuance
           </button>
         </>
       )}
 
-      {bond && bond.status === 'issued' && (
+      {bond && bond.status === 'issued' && !issuing && (
         <>
+        <Pipeline outcome="approved" />
         <span className="badge-success">Issued on Hedera testnet</span>
         <dl className="details">
           <dt>Coupon rate</dt>
@@ -122,6 +162,12 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
           <dt>Maturity</dt>
           <dd>{bond.maturityDateSeconds ? formatDate(bond.maturityDateSeconds) : '—'}</dd>
         </dl>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 16 }}>
+          Issue Bond → Hedera ATS → Bond created → Scheduled coupons → Redemption → The Graph repayment history
+          <br />
+          (coupon/redemption settlement and subgraph indexing run on their own real Hedera Scheduled Transaction
+          schedule — not triggered by this button.)
+        </p>
         </>
       )}
 
