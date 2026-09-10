@@ -12,7 +12,8 @@ import {
 describe('explorer links', () => {
   it('builds real HashScan testnet URLs per entity type', () => {
     expect(hashscanContract('0.0.10410671')).toBe('https://hashscan.io/testnet/contract/0.0.10410671');
-    expect(hashscanToken('0.0.10425775')).toBe('https://hashscan.io/testnet/token/0.0.10425775');
+    // Bond tokens are ATS diamond contracts, not native HTS tokens — /contract/ is the real, working HashScan page.
+    expect(hashscanToken('0.0.10425775')).toBe('https://hashscan.io/testnet/contract/0.0.10425775');
     expect(hashscanAccount('0.0.8050897')).toBe('https://hashscan.io/testnet/account/0.0.8050897');
     expect(hashscanTransaction('0xabc')).toBe('https://hashscan.io/testnet/transaction/0xabc');
   });

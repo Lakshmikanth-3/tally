@@ -162,7 +162,8 @@ test.describe('an issued bond', () => {
     await issued.click();
     await expect(page.locator('.badge-success')).toContainText('Issued on Hedera testnet', { timeout: 240_000 });
 
-    const tokenLink = page.locator('a[href*="hashscan.io/testnet/token/"]');
+    // Bond tokens are ATS diamond contracts, not native HTS tokens — /contract/ is the real page.
+    const tokenLink = page.locator('a[href*="hashscan.io/testnet/contract/"]');
     await expect(tokenLink).toHaveCount(1);
     const txLink = page.locator('a[href*="hashscan.io/testnet/transaction/"]');
     await expect(txLink).toHaveCount(1);

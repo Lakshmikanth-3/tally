@@ -200,7 +200,8 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
             </dd>
             <dt>Bond token</dt>
             <dd>
-              <a href={`https://hashscan.io/testnet/token/${bond.bondTokenId}`} target="_blank" rel="noreferrer">
+              {/* Bond tokens are ATS diamond contracts, not native HTS tokens — /contract/ is the correct HashScan page. */}
+              <a href={`https://hashscan.io/testnet/contract/${bond.bondTokenId}`} target="_blank" rel="noreferrer">
                 {bond.bondTokenId} ↗
               </a>
             </dd>

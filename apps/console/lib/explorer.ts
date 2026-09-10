@@ -13,8 +13,12 @@ export function hashscanContract(hederaId: string): string {
   return `${HASHSCAN_TESTNET}/contract/${hederaId}`;
 }
 
+/// Bond tokens are ATS diamond contracts (deployed via a constructor call
+/// that CREATEs a new contract entity), not native HTS token entities —
+/// HashScan's /token/ page 404s on one, verified live. /contract/ is the
+/// correct page for the same Hedera id.
 export function hashscanToken(hederaId: string): string {
-  return `${HASHSCAN_TESTNET}/token/${hederaId}`;
+  return hashscanContract(hederaId);
 }
 
 export function hashscanAccount(hederaId: string): string {
