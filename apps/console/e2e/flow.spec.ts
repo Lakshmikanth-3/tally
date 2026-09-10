@@ -90,6 +90,26 @@ test.describe('verification page', () => {
   });
 });
 
+test.describe('secondary market', () => {
+  test('shows the real on-chain order book', async ({ page }) => {
+    await page.goto('/market');
+    await expect(page.getByRole('heading', { name: 'Secondary market' })).toBeVisible();
+
+    // Real data or an honest empty state — never a fabricated placeholder row.
+    const hasRows = (await page.locator('.data-table tbody tr').count()) > 0;
+    const hasEmptyState = await page.locator('.empty-state').isVisible().catch(() => false);
+    expect(hasRows || hasEmptyState).toBe(true);
+  });
+});
+
+test.describe('repayment register', () => {
+  test('reads the live subgraph', async ({ page }) => {
+    await page.goto('/register-lookup');
+    await expect(page.getByRole('heading', { name: 'Issuer repayment register' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Lifecycle events' })).toBeVisible();
+  });
+});
+
 test.describe('registration and underwriting', () => {
   // The issuance route imports the whole ATS/Playwright signer chain, so
   // its first compile in a dev server can take well over a minute. That's

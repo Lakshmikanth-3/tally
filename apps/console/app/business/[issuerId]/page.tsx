@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation';
 import { getBusiness, getRevenueSnapshot, getStripeAccountId } from '@/lib/business';
+import { getLatestBond } from '@/lib/bonds';
+import { computeBondId } from '@/lib/secondary-market';
 import { getStripeAccountCountry, isStripeTestMode } from '@/lib/stripe';
 import BondPanel from './BondPanel';
+import LifecycleTimeline from './LifecycleTimeline';
 import StripeTransactionsPanel from './StripeTransactionsPanel';
 
 function formatMicrosUSD(micros: bigint): string {
@@ -111,6 +114,13 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
       {stripeAccountId && <StripeTransactionsPanel issuerId={issuerId} canGenerate={canGenerateTestData} />}
 
       <BondPanel issuerId={issuerId} />
+
+      {(() => {
+        const bond = getLatestBond(issuerId);
+        if (bond?.status !== 'issued' || !bond.evmDiamondAddress || !bond.bondTokenId) return null;
+        const bondId = computeBondId(bond.evmDiamondAddress, bond.bondTokenId);
+        return <LifecycleTimeline bondId={bondId} />;
+      })()}
     </main>
   );
 }

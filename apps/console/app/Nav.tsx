@@ -9,8 +9,10 @@ export default function Nav() {
       </Link>
       <div className="nav-links">
         <Link href="/dashboard">Dashboard</Link>
+        <Link href="/market">Market</Link>
+        <Link href="/register-lookup">Repayment register</Link>
         <Link href="/proof">Verify on-chain</Link>
-        <Link href="/register">Register</Link>
+        <Link href="/register">Add a business</Link>
       </div>
     </nav>
   );
