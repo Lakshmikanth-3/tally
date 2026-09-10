@@ -1,37 +1,36 @@
 import { Fragment } from 'react';
 import { getPlatformStats } from '@/lib/business';
 import CountUp from './CountUp';
-import HeroVisual from './HeroVisual';
 import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from './Icons';
 
 const PIPELINE = [
-  { icon: <StoreIcon size={18} />, label: 'Business', sub: 'Real revenue' },
-  { icon: <CardIcon size={18} />, label: 'Stripe', sub: 'Connect + sync' },
-  { icon: <LockIcon size={18} />, label: 'Chainlink CRE', sub: 'Read privately' },
-  { icon: <ShieldIcon size={18} />, label: 'Confidential TEE', sub: 'Verdict only' },
-  { icon: <ChainIcon size={18} />, label: 'Hedera ATS', sub: 'Bond issued' },
-  { icon: <ClockIcon size={18} />, label: 'Scheduled', sub: 'No keeper' },
-  { icon: <ChartIcon size={18} />, label: 'The Graph', sub: 'Public record' },
+  { icon: <StoreIcon />, label: 'Business', sub: 'Real revenue' },
+  { icon: <CardIcon />, label: 'Stripe', sub: 'Connect + sync' },
+  { icon: <LockIcon />, label: 'Chainlink CRE', sub: 'Read privately' },
+  { icon: <ShieldIcon />, label: 'Confidential TEE', sub: 'Verdict only' },
+  { icon: <ChainIcon />, label: 'Hedera ATS', sub: 'Bond issued' },
+  { icon: <ClockIcon />, label: 'Scheduled', sub: 'No keeper' },
+  { icon: <ChartIcon />, label: 'The Graph', sub: 'Public record' },
 ];
 
 const FEATURES = [
   {
-    icon: <LockIcon size={20} />,
+    icon: <LockIcon size={24} />,
     title: 'Underwritten in private',
     body: "A business's real revenue is read once, inside a Chainlink Confidential Workflow's TEE. Only a verdict — approve or decline, and a coupon rate — ever leaves the enclave.",
   },
   {
-    icon: <CoinIcon size={20} />,
+    icon: <CoinIcon size={24} />,
     title: 'Issued as a real bond',
     body: "That verdict sets the coupon rate on a bond issued through Hedera's Asset Tokenization Studio — a real fixed-rate instrument, not a token invented for a demo.",
   },
   {
-    icon: <ClockIcon size={20} />,
+    icon: <ClockIcon size={24} />,
     title: 'Settles itself',
     body: 'Coupons and redemption fire on real Hedera Scheduled Transactions — no keeper bot, no cron job, no human watching a calendar.',
   },
   {
-    icon: <BookIcon size={20} />,
+    icon: <BookIcon size={24} />,
     title: 'Priced in public',
     body: "Every issuer's repayment history is indexed by a Graph subgraph into a public, queryable register — credit earned by repayment, not by paperwork.",
   },
@@ -76,10 +75,6 @@ export default function HomePage() {
               <span className="dot" style={{ background: '#8b6df0' }} /> The Graph
             </span>
           </div>
-        </div>
-
-        <div className="fade-up" style={{ ['--stagger' as string]: 2 }}>
-          <HeroVisual />
         </div>
       </div>
 
