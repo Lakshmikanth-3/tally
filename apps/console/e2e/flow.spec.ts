@@ -45,8 +45,10 @@ test.describe('landing page', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toContainText('short bond');
 
-    // The rotating coin background must actually be present and looping.
-    const video = page.locator('.video-bg video');
+    // The rotating coin must actually be present and looping, framed in
+    // the hero's contained visual card (not a full-bleed background —
+    // that only fit the earlier dark theme).
+    const video = page.locator('.hero-visual video');
     await expect(video).toHaveCount(1);
     await expect(video).toHaveAttribute('loop', '');
     await expect(video).toHaveAttribute('muted', ''); // autoplay is blocked without this
