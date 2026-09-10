@@ -29,9 +29,11 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
 
   return (
     <main>
-      <div className="fade-up" style={{ ['--stagger' as string]: 0 }}>
+      <div className="fade-up" style={{ ['--stagger' as string]: 0, paddingTop: 40 }}>
         <h1>{business.name}</h1>
-        <p>Issuer ID: {business.issuerId}</p>
+        <p className="mono" style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+          {business.issuerId}
+        </p>
 
         {business.isDemo && <span className="badge">Synthetic demo data — not a real business</span>}
       </div>
@@ -70,14 +72,14 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
           <p role="alert">Could not load live revenue: {revenueError}</p>
         ) : (
           revenue && (
-            <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 44, flexWrap: 'wrap' }}>
               <div>
-                <p className="stat-label">Revenue</p>
+                <p className="stat-label">90-day revenue</p>
                 <p className="stat">{formatMicrosUSD(revenue.trailing90dTotalUSD)}</p>
               </div>
               <div>
                 <p className="stat-label">Volatility</p>
-                <p className="stat">{revenue.volatilityScore} / 100</p>
+                <p className="stat">{revenue.volatilityScore}/100</p>
               </div>
               <div>
                 <p className="stat-label">History</p>

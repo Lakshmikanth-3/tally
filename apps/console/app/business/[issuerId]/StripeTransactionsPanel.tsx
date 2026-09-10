@@ -78,59 +78,68 @@ export default function StripeTransactionsPanel({ issuerId, canGenerate }: { iss
   }
 
   return (
-    <section>
+    <section className="fade-up" style={{ ['--stagger' as string]: 3 }}>
       <h2>Stripe transactions</h2>
 
       {canGenerate && (
         <>
-          <p>
-            Developer/demo control — creates real Stripe TEST MODE transactions via Stripe's own Test Clock mechanism
-            (real invoices, backdated across ~40 real simulated days), not fake rows inserted into this database.
+          <p style={{ fontSize: '0.88rem' }}>
+            Developer/demo control — creates real Stripe TEST MODE transactions via Stripe&apos;s own Test Clock
+            mechanism (real invoices, backdated across ~40 real simulated days), not fake rows inserted into this
+            database.
           </p>
           <button onClick={handleGenerate} disabled={generating}>
-            {generating ? 'Creating real Stripe test transactions — this takes about a minute…' : 'Generate Stripe test transactions'}
+            {generating ? (
+              <>
+                <span className="spinner" /> Creating real Stripe test transactions…
+              </>
+            ) : (
+              'Generate Stripe test transactions'
+            )}
           </button>
           {generateError && <p role="alert">{generateError}</p>}
         </>
       )}
 
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 14 }}>
         <button className="secondary" onClick={toggleTable}>
           {showTable ? 'Hide' : 'View'} Stripe transactions
         </button>
       </div>
 
       {showTable && (
-        <div style={{ overflowX: 'auto', marginTop: 12 }}>
+        <>
           {loadingTable ? (
-            <p>Loading…</p>
+            <p style={{ marginTop: 16 }}>Loading…</p>
           ) : !transactions || transactions.length === 0 ? (
-            <p>No transactions yet.</p>
+            <p style={{ marginTop: 16 }}>No transactions yet.</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '6px 8px' }}>Date</th>
-                  <th style={{ padding: '6px 8px' }}>Stripe ID</th>
-                  <th style={{ padding: '6px 8px' }}>Amount</th>
-                  <th style={{ padding: '6px 8px' }}>Status</th>
-                  <th style={{ padding: '6px 8px' }}>Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => (
-                  <tr key={`${tx.stripeId ?? 'manual'}-${tx.timestampSeconds}`} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '6px 8px' }}>{new Date(tx.timestampSeconds * 1000).toLocaleDateString()}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{tx.stripeId ?? '—'}</td>
-                    <td style={{ padding: '6px 8px' }}>{formatMicrosUSD(tx.amountUSD)}</td>
-                    <td style={{ padding: '6px 8px' }}>{tx.source === 'manual' ? 'recorded' : 'paid'}</td>
-                    <td style={{ padding: '6px 8px' }}>{sourceLabel(tx.source)}</td>
+            <div className="table-scroll">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Stripe ID</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Source</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {transactions.map((tx) => (
+                    <tr key={`${tx.stripeId ?? 'manual'}-${tx.timestampSeconds}`}>
+                      <td>{new Date(tx.timestampSeconds * 1000).toLocaleDateString()}</td>
+                      <td className="mono">{tx.stripeId ?? '—'}</td>
+                      <td style={{ color: 'var(--text)' }}>{formatMicrosUSD(tx.amountUSD)}</td>
+                      <td>{tx.source === 'manual' ? 'recorded' : 'paid'}</td>
+                      <td>{sourceLabel(tx.source)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </>
       )}
     </section>
   );

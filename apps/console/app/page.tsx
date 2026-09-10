@@ -1,37 +1,38 @@
 import { Fragment } from 'react';
 import { getPlatformStats } from '@/lib/business';
 import CountUp from './CountUp';
+import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from './Icons';
 
 const PIPELINE = [
-  { icon: '🏪', label: 'Business', sub: 'Real revenue' },
-  { icon: '💳', label: 'Stripe', sub: 'Connect + sync' },
-  { icon: '🔒', label: 'Chainlink CRE', sub: 'Read privately' },
-  { icon: '🛡️', label: 'Confidential TEE', sub: 'Verdict only' },
-  { icon: '⛓️', label: 'Hedera ATS', sub: 'Bond issued' },
-  { icon: '⏱️', label: 'Scheduled', sub: 'No keeper' },
-  { icon: '📊', label: 'The Graph', sub: 'Public record' },
+  { icon: <StoreIcon />, label: 'Business', sub: 'Real revenue' },
+  { icon: <CardIcon />, label: 'Stripe', sub: 'Connect + sync' },
+  { icon: <LockIcon />, label: 'Chainlink CRE', sub: 'Read privately' },
+  { icon: <ShieldIcon />, label: 'Confidential TEE', sub: 'Verdict only' },
+  { icon: <ChainIcon />, label: 'Hedera ATS', sub: 'Bond issued' },
+  { icon: <ClockIcon />, label: 'Scheduled', sub: 'No keeper' },
+  { icon: <ChartIcon />, label: 'The Graph', sub: 'Public record' },
 ];
 
 const FEATURES = [
   {
-    icon: '🔐',
+    icon: <LockIcon size={24} />,
     title: 'Underwritten in private',
-    body: "A business's real revenue is read once, inside a Chainlink Confidential Workflow's TEE. Only a verdict — approve/decline, coupon rate — ever leaves the enclave.",
+    body: "A business's real revenue is read once, inside a Chainlink Confidential Workflow's TEE. Only a verdict — approve or decline, and a coupon rate — ever leaves the enclave.",
   },
   {
-    icon: '🪙',
+    icon: <CoinIcon size={24} />,
     title: 'Issued as a real bond',
-    body: "That verdict sets the coupon rate on a bond issued through Hedera's Asset Tokenization Studio — a real fixed-rate instrument, not a token invented for the demo.",
+    body: "That verdict sets the coupon rate on a bond issued through Hedera's Asset Tokenization Studio — a real fixed-rate instrument, not a token invented for a demo.",
   },
   {
-    icon: '⏰',
+    icon: <ClockIcon size={24} />,
     title: 'Settles itself',
     body: 'Coupons and redemption fire on real Hedera Scheduled Transactions — no keeper bot, no cron job, no human watching a calendar.',
   },
   {
-    icon: '📖',
+    icon: <BookIcon size={24} />,
     title: 'Priced in public',
-    body: "Every issuer's repayment history is indexed by a Graph subgraph into a public, queryable performance register — credit earned by repayment, not paperwork.",
+    body: "Every issuer's repayment history is indexed by a Graph subgraph into a public, queryable register — credit earned by repayment, not by paperwork.",
   },
 ];
 
@@ -41,73 +42,61 @@ export default function HomePage() {
 
   return (
     <main className="page-wide">
-      <section className="hero">
-        <div className="hero-blob a" />
-        <div className="hero-blob b" />
+      <div className="hero">
         <div className="hero-content">
           <div className="eyebrow fade-up" style={{ ['--stagger' as string]: 0 }}>
             <span className="eyebrow-dot" />
-            ETHOnline 2026 — Hedera · Chainlink · The Graph
+            ETHOnline 2026 · Hedera · Chainlink · The Graph
           </div>
           <h1 className="fade-up" style={{ ['--stagger' as string]: 1 }}>
             A shop&apos;s verified revenue becomes a <span className="accent-text">short bond</span>.
           </h1>
           <p className="hero-sub fade-up" style={{ ['--stagger' as string]: 2 }}>
-            Underwritten in private, priced in public, settles itself. Chainlink reads the revenue privately and sets
-            the rate. Hedera issues the bond and pays it back on its own schedule. The Graph makes every issuer&apos;s
-            track record public and comparable.
+            Underwritten in private, priced in public, settles itself. Chainlink reads the revenue privately and sets the
+            rate. Hedera issues the bond and pays it back on its own schedule. The Graph makes every issuer&apos;s track
+            record public.
           </p>
           <div className="hero-cta fade-up" style={{ ['--stagger' as string]: 3 }}>
             <a className="button-link" href="/register">
-              Register your business
+              Register your business →
             </a>
-            <a className="button-link" href="/dashboard" style={{ background: 'transparent', color: 'var(--accent)', border: '1px solid var(--border)' }}>
+            <a className="button-link secondary" href="/dashboard">
               View the dashboard
             </a>
           </div>
           <div className="sponsor-strip fade-up" style={{ ['--stagger' as string]: 4 }}>
             <span className="sponsor-chip">
-              <span className="dot" style={{ background: '#8247e5' }} /> Hedera ATS
+              <span className="dot" style={{ background: '#8259ef' }} /> Hedera ATS
             </span>
             <span className="sponsor-chip">
-              <span className="dot" style={{ background: '#375bd2' }} /> Chainlink CRE
+              <span className="dot" style={{ background: '#4a7cf7' }} /> Chainlink CRE
             </span>
             <span className="sponsor-chip">
-              <span className="dot" style={{ background: '#6747ed' }} /> The Graph
+              <span className="dot" style={{ background: '#8b6df0' }} /> The Graph
             </span>
           </div>
         </div>
-      </section>
+      </div>
 
       <div className="stat-grid">
-        <div className="stat-card fade-up" style={{ ['--stagger' as string]: 0 }}>
-          <p className="stat-label">Businesses registered</p>
-          <p className="stat">
-            <CountUp value={stats.totalBusinesses} />
-          </p>
-        </div>
-        <div className="stat-card fade-up" style={{ ['--stagger' as string]: 1 }}>
-          <p className="stat-label">Bonds issued</p>
-          <p className="stat">
-            <CountUp value={stats.bondsIssued} />
-          </p>
-        </div>
-        <div className="stat-card fade-up" style={{ ['--stagger' as string]: 2 }}>
-          <p className="stat-label">Total face value</p>
-          <p className="stat">
-            <CountUp value={totalFaceValueUsd} prefix="$" />
-          </p>
-        </div>
-        <div className="stat-card fade-up" style={{ ['--stagger' as string]: 3 }}>
-          <p className="stat-label">Real transactions synced</p>
-          <p className="stat">
-            <CountUp value={stats.totalTransactions} />
-          </p>
-        </div>
+        {[
+          { label: 'Businesses registered', value: stats.totalBusinesses },
+          { label: 'Bonds issued', value: stats.bondsIssued },
+          { label: 'Total face value', value: totalFaceValueUsd, prefix: '$' },
+          { label: 'Transactions synced', value: stats.totalTransactions },
+        ].map((s, i) => (
+          <div className="stat-card fade-up" key={s.label} style={{ ['--stagger' as string]: i }}>
+            <p className="stat-label">{s.label}</p>
+            <p className="stat">
+              <CountUp value={s.value} prefix={s.prefix} />
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="section-heading">
         <h2>How it works</h2>
+        <p className="section-sub">Seven steps, every one of them real infrastructure</p>
       </div>
       <div className="pipeline-flow">
         {PIPELINE.map((step, i) => (
@@ -117,7 +106,11 @@ export default function HomePage() {
               <div className="label">{step.label}</div>
               <div className="sub">{step.sub}</div>
             </div>
-            {i < PIPELINE.length - 1 && <div className="pipeline-arrow">→</div>}
+            {i < PIPELINE.length - 1 && (
+              <div className="pipeline-arrow" style={{ ['--stagger' as string]: i }}>
+                →
+              </div>
+            )}
           </Fragment>
         ))}
       </div>

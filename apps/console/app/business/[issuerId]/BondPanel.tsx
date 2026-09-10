@@ -29,42 +29,53 @@ const REASON_LABELS: Record<number, string> = {
   4: 'Issuer has an open default',
 };
 
-function formatDate(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleString();
-}
-
-const PIPELINE_STEPS = [
+const RUN_STEPS = [
   'Revenue data collected',
   'TALLY Revenue API',
   'Chainlink CRE',
   'Confidential TEE',
   'Private underwriting',
+  'Hedera ATS issuance',
 ];
 
-/// Shows the real pipeline shape — never the raw revenue number, which
-/// never leaves the TEE. Rendered while a real underwriting call is
-/// in flight, and left visible (collapsed to its outcome) once it resolves.
-function Pipeline({ outcome }: { outcome: 'running' | 'approved' | 'declined' | 'failed' }) {
+function formatDate(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleString();
+}
+
+/// The live pipeline. While a real issuance is in flight the steps advance
+/// on a timer purely as a progress indication — the underlying call is one
+/// real, long HTTP request, so this reflects expected sequence, not
+/// per-step server confirmation. Once resolved it renders the final,
+/// real outcome.
+function RunPipeline({ running, outcome }: { running: boolean; outcome: 'approved' | 'declined' | null }) {
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    if (!running) return;
+    setActiveStep(0);
+    const timer = setInterval(() => {
+      setActiveStep((s) => Math.min(s + 1, RUN_STEPS.length - 1));
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [running]);
+
+  const allDone = !running && outcome !== null;
+
   return (
-    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '8px 0 16px' }}>
-      {PIPELINE_STEPS.map((step, i) => (
-        <span key={step}>
-          {step}
-          {i < PIPELINE_STEPS.length - 1 && ' → '}
-        </span>
-      ))}
-      <br />
-      <em>Revenue processed privately inside Chainlink Confidential Workflow.</em>
-      {outcome === 'approved' && (
-        <>
-          <br />→ <strong style={{ color: 'var(--accent)' }}>APPROVED</strong>
-        </>
-      )}
-      {outcome === 'declined' && (
-        <>
-          <br />→ <strong style={{ color: 'var(--danger)' }}>DECLINED</strong>
-        </>
-      )}
+    <div className="run-pipeline">
+      {RUN_STEPS.map((step, i) => {
+        const done = allDone || (running && i < activeStep);
+        const active = running && i === activeStep;
+        return (
+          <div key={step} className={`run-step${done ? ' done' : ''}${active ? ' active' : ''}`}>
+            <span className="marker">{done ? '✓' : active ? <span className="spinner" /> : i + 1}</span>
+            {step}
+          </div>
+        );
+      })}
+      <div className="run-note">🔒 Revenue processed privately inside Chainlink Confidential Workflow.</div>
+      {outcome === 'approved' && <div className="verdict-line approved">APPROVED</div>}
+      {outcome === 'declined' && <div className="verdict-line declined">DECLINED</div>}
     </div>
   );
 }
@@ -98,28 +109,40 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
     }
   }
 
-  if (loading) return <p>Loading bond status…</p>;
+  if (loading) {
+    return (
+      <section>
+        <h2>Underwriting &amp; bond</h2>
+        <p>Loading bond status…</p>
+      </section>
+    );
+  }
+
+  const outcome = bond?.status === 'issued' ? 'approved' : bond?.status === 'declined' ? 'declined' : null;
 
   return (
-    <section>
+    <section className="fade-up" style={{ ['--stagger' as string]: 4 }}>
       <h2>Underwriting &amp; bond</h2>
 
-      {issuing && <Pipeline outcome="running" />}
+      {(issuing || outcome) && <RunPipeline running={issuing} outcome={issuing ? null : outcome} />}
 
       {!bond && !issuing && (
         <>
-          <p>No underwriting attempt yet.</p>
-          <button onClick={handleIssue} disabled={issuing}>
-            Run underwriting &amp; issue bond
-          </button>
+          <p>No underwriting attempt yet. This runs the real policy over this business&apos;s real revenue snapshot.</p>
+          <button onClick={handleIssue}>Run underwriting &amp; issue bond</button>
         </>
+      )}
+
+      {issuing && (
+        <p style={{ fontSize: '0.86rem' }}>
+          Issuing on Hedera testnet — real on-chain transactions, roughly 15–30 seconds.
+        </p>
       )}
 
       {bond && bond.status === 'declined' && !issuing && (
         <>
-          <Pipeline outcome="declined" />
           <p role="alert">Declined: {REASON_LABELS[bond.reasonCode] ?? `reason code ${bond.reasonCode}`}</p>
-          <button onClick={handleIssue} disabled={issuing}>
+          <button className="secondary" onClick={handleIssue} style={{ marginTop: 14 }}>
             Re-run underwriting
           </button>
         </>
@@ -128,7 +151,7 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
       {bond && bond.status === 'failed' && !issuing && (
         <>
           <p role="alert">Issuance failed: {bond.errorMessage}</p>
-          <button onClick={handleIssue} disabled={issuing}>
+          <button className="secondary" onClick={handleIssue} style={{ marginTop: 14 }}>
             Retry issuance
           </button>
         </>
@@ -136,38 +159,37 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
 
       {bond && bond.status === 'issued' && !issuing && (
         <>
-        <Pipeline outcome="approved" />
-        <span className="badge-success">Issued on Hedera testnet</span>
-        <dl className="details">
-          <dt>Coupon rate</dt>
-          <dd>{((bond.couponBps ?? 0) / 100).toFixed(2)}%</dd>
-          <dt>Face value</dt>
-          <dd>${bond.faceValueUsd}</dd>
-          <dt>Symbol / ISIN</dt>
-          <dd>
-            {bond.symbol} / {bond.isin}
-          </dd>
-          <dt>Bond token ID</dt>
-          <dd>
-            <a href={`https://hashscan.io/testnet/token/${bond.bondTokenId}`} target="_blank" rel="noreferrer">
-              {bond.bondTokenId}
-            </a>
-          </dd>
-          <dt>Issuance transaction</dt>
-          <dd>
-            <a href={`https://hashscan.io/testnet/transaction/${bond.transactionId}`} target="_blank" rel="noreferrer">
-              {bond.transactionId}
-            </a>
-          </dd>
-          <dt>Maturity</dt>
-          <dd>{bond.maturityDateSeconds ? formatDate(bond.maturityDateSeconds) : '—'}</dd>
-        </dl>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 16 }}>
-          Issue Bond → Hedera ATS → Bond created → Scheduled coupons → Redemption → The Graph repayment history
-          <br />
-          (coupon/redemption settlement and subgraph indexing run on their own real Hedera Scheduled Transaction
-          schedule — not triggered by this button.)
-        </p>
+          <span className="badge-success">✓ Issued on Hedera testnet</span>
+          <dl className="details">
+            <dt>Coupon</dt>
+            <dd>{((bond.couponBps ?? 0) / 100).toFixed(2)}%</dd>
+            <dt>Face value</dt>
+            <dd>${bond.faceValueUsd}</dd>
+            <dt>Symbol / ISIN</dt>
+            <dd>
+              {bond.symbol} / {bond.isin}
+            </dd>
+            <dt>Bond token</dt>
+            <dd>
+              <a href={`https://hashscan.io/testnet/token/${bond.bondTokenId}`} target="_blank" rel="noreferrer">
+                {bond.bondTokenId} ↗
+              </a>
+            </dd>
+            <dt>Issuance tx</dt>
+            <dd>
+              <a href={`https://hashscan.io/testnet/transaction/${bond.transactionId}`} target="_blank" rel="noreferrer">
+                {bond.transactionId} ↗
+              </a>
+            </dd>
+            <dt>Maturity</dt>
+            <dd>{bond.maturityDateSeconds ? formatDate(bond.maturityDateSeconds) : '—'}</dd>
+          </dl>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: 20, marginBottom: 0 }}>
+            Issue Bond → Hedera ATS → Bond created → Scheduled coupons → Redemption → The Graph repayment history
+            <br />
+            Coupon and redemption settlement run on their own real Hedera Scheduled Transaction schedule — not triggered
+            by this button.
+          </p>
         </>
       )}
 
