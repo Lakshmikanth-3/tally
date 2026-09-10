@@ -28,6 +28,22 @@ export function getStripeConnectAuthorizeUrl(issuerId: string): string {
     redirect_uri: requireEnv('STRIPE_CONNECT_REDIRECT_URI'),
     state: issuerId,
   });
+
+  // [VERIFIED via real live Stripe calls] In test mode, prefill the new
+  // connected account's country as US. This is not cosmetic: Stripe
+  // enforces a real RBI export-compliance rule on India-domiciled
+  // accounts that rejects *any* USD invoice payment on them, whatever
+  // description fields are set — confirmed live, and confirmed to be
+  // specifically a cross-border rule (the same call in INR succeeds).
+  // Tally's money model is USD-only and this repo will not invent an FX
+  // rate, so a US-domiciled test account is what makes the test-mode
+  // revenue-history generator (see createTestModeRevenueHistory) usable
+  // at all. Live mode is untouched — a real merchant's real country is
+  // theirs to declare, never prefilled by us.
+  if (isStripeTestMode()) {
+    params.set('stripe_user[country]', 'US');
+  }
+
   return `https://connect.stripe.com/oauth/authorize?${params.toString()}`;
 }
 
@@ -82,6 +98,20 @@ export async function listStripeCharges(stripeAccountId: string, sinceSeconds?: 
 /// invents, determines whether every call this module makes is test-mode.
 export function isStripeTestMode(): boolean {
   return requireEnv('STRIPE_SECRET_KEY').startsWith('sk_test_');
+}
+
+/// The connected account's real, Stripe-reported country. Surfaced in the
+/// UI because it decides whether test-mode USD invoice generation can work
+/// at all — see getStripeConnectAuthorizeUrl for why.
+export async function getStripeAccountCountry(stripeAccountId: string): Promise<string | null> {
+  try {
+    const account = await getPlatformStripeClient().accounts.retrieve(stripeAccountId);
+    return account.country ?? null;
+  } catch {
+    // A country we can't read is not worth failing the whole page over —
+    // the generator itself still surfaces the real Stripe error if it hits one.
+    return null;
+  }
 }
 
 const DAY_SECONDS = 86_400;

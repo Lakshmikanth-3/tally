@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getBusiness, getRevenueSnapshot, getStripeAccountId } from '@/lib/business';
-import { isStripeTestMode } from '@/lib/stripe';
+import { getStripeAccountCountry, isStripeTestMode } from '@/lib/stripe';
 import BondPanel from './BondPanel';
 import StripeTransactionsPanel from './StripeTransactionsPanel';
 
@@ -15,6 +15,11 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
 
   const stripeAccountId = getStripeAccountId(issuerId);
   const testMode = isStripeTestMode();
+  const accountCountry = stripeAccountId ? await getStripeAccountCountry(stripeAccountId) : null;
+  // Stripe blocks USD invoice payment on India-domiciled accounts under a
+  // real RBI export rule, which is exactly what the test-mode revenue
+  // generator needs — see lib/stripe.ts.
+  const canGenerateTestData = testMode && accountCountry !== null && accountCountry !== 'IN';
 
   // getRevenueSnapshot syncs from Stripe first when connected — a real API
   // failure (e.g. platform credentials not configured yet) must surface as
@@ -46,14 +51,27 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
               <span className="badge-success">✓ Stripe Connected</span>{' '}
               {testMode && <span className="badge">TEST MODE</span>}
             </p>
-            <p>
-              Connected to Stripe account {stripeAccountId}. Revenue below is pulled live from Stripe — not manually
-              entered.
+            <p className="mono" style={{ fontSize: '0.8rem' }}>
+              {stripeAccountId}
+              {accountCountry && ` · ${accountCountry}`}
             </p>
+            <p>Revenue below is pulled live from Stripe — not manually entered.</p>
             {testMode && (
               <p className="stat-label">
                 Data Source: <strong>Stripe Test Mode — synthetic/test transactions</strong>
               </p>
+            )}
+            {testMode && accountCountry === 'IN' && (
+              <div role="alert" style={{ marginTop: 14 }}>
+                This connected account is India-domiciled. Stripe enforces a real RBI export-compliance rule that
+                rejects USD invoice payment on it, which is what test-mode revenue generation needs — so the generator
+                below will fail on this account. Reconnect with a US test account to use it.
+                <div style={{ marginTop: 12 }}>
+                  <a className="button-link secondary" href={`/api/business/${issuerId}/stripe/authorize`}>
+                    Reconnect Stripe (US test account)
+                  </a>
+                </div>
+              </div>
             )}
           </>
         ) : (
@@ -90,7 +108,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
         )}
       </section>
 
-      {stripeAccountId && <StripeTransactionsPanel issuerId={issuerId} canGenerate={testMode} />}
+      {stripeAccountId && <StripeTransactionsPanel issuerId={issuerId} canGenerate={canGenerateTestData} />}
 
       <BondPanel issuerId={issuerId} />
     </main>

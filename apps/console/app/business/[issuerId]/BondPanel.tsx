@@ -29,24 +29,30 @@ const REASON_LABELS: Record<number, string> = {
   4: 'Issuer has an open default',
 };
 
+/// What this button actually does, in order. Deliberately NOT labelled
+/// "Chainlink CRE ✓ / Confidential TEE ✓": this request runs the
+/// underwriting policy in Tally's own backend. The CRE workflow runs the
+/// *identical* policy (same @tally/underwriting package) against this same
+/// authenticated revenue API inside a real TEE, but it runs on its own
+/// trigger, not synchronously on this click — claiming otherwise here
+/// would misrepresent the architecture to anyone watching.
 const RUN_STEPS = [
-  'Revenue data collected',
-  'TALLY Revenue API',
-  'Chainlink CRE',
-  'Confidential TEE',
-  'Private underwriting',
-  'Hedera ATS issuance',
+  'Revenue snapshot computed',
+  'Underwriting policy applied',
+  'Verdict returned',
 ];
+
+const ISSUE_STEP = 'Hedera ATS issuance';
 
 function formatDate(seconds: number): string {
   return new Date(seconds * 1000).toLocaleString();
 }
 
-/// The live pipeline. While a real issuance is in flight the steps advance
-/// on a timer purely as a progress indication — the underlying call is one
-/// real, long HTTP request, so this reflects expected sequence, not
-/// per-step server confirmation. Once resolved it renders the final,
-/// real outcome.
+/// The live pipeline. The whole flow is a single long HTTP request, so
+/// while it's in flight the steps advance on a timer as a progress
+/// indication — they are not per-step confirmations from the server, and
+/// nothing is marked complete once the real outcome is known unless it
+/// actually happened (a declined run never shows issuance as done).
 function RunPipeline({ running, outcome }: { running: boolean; outcome: 'approved' | 'declined' | null }) {
   const [activeStep, setActiveStep] = useState(0);
 
@@ -54,17 +60,19 @@ function RunPipeline({ running, outcome }: { running: boolean; outcome: 'approve
     if (!running) return;
     setActiveStep(0);
     const timer = setInterval(() => {
-      setActiveStep((s) => Math.min(s + 1, RUN_STEPS.length - 1));
-    }, 3200);
+      setActiveStep((s) => Math.min(s + 1, RUN_STEPS.length));
+    }, 2200);
     return () => clearInterval(timer);
   }, [running]);
 
-  const allDone = !running && outcome !== null;
+  const resolved = !running && outcome !== null;
+  // Issuance only ever happened on an approval — a decline stops at the verdict.
+  const issueState = resolved ? (outcome === 'approved' ? 'done' : 'skipped') : running ? 'pending' : 'pending';
 
   return (
     <div className="run-pipeline">
       {RUN_STEPS.map((step, i) => {
-        const done = allDone || (running && i < activeStep);
+        const done = resolved || (running && i < activeStep);
         const active = running && i === activeStep;
         return (
           <div key={step} className={`run-step${done ? ' done' : ''}${active ? ' active' : ''}`}>
@@ -73,9 +81,28 @@ function RunPipeline({ running, outcome }: { running: boolean; outcome: 'approve
           </div>
         );
       })}
-      <div className="run-note">🔒 Revenue processed privately inside Chainlink Confidential Workflow.</div>
+
+      <div className={`run-step${issueState === 'done' ? ' done' : ''}${running && activeStep >= RUN_STEPS.length ? ' active' : ''}`}>
+        <span className="marker">
+          {issueState === 'done' ? '✓' : issueState === 'skipped' ? '–' : running && activeStep >= RUN_STEPS.length ? <span className="spinner" /> : RUN_STEPS.length + 1}
+        </span>
+        {ISSUE_STEP}
+        {issueState === 'skipped' && <span style={{ color: 'var(--text-dim)' }}> — not reached (declined)</span>}
+        {!resolved && <span style={{ color: 'var(--text-dim)' }}> — only if approved</span>}
+      </div>
+
       {outcome === 'approved' && <div className="verdict-line approved">APPROVED</div>}
       {outcome === 'declined' && <div className="verdict-line declined">DECLINED</div>}
+
+      <div className="run-note">
+        🔒 The raw revenue figure is never returned by this call — only the verdict and coupon rate.
+      </div>
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '10px 0 0' }}>
+        This run applies the underwriting policy in Tally&apos;s backend. The Chainlink CRE workflow runs the identical
+        policy (same <code>@tally/underwriting</code> package) against this same authenticated revenue API from inside a
+        real TEE — verified with <code>cre workflow simulate</code>; live TEE deploy is pending Chainlink&apos;s
+        private-beta access review.
+      </p>
     </div>
   );
 }
@@ -135,7 +162,8 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
 
       {issuing && (
         <p style={{ fontSize: '0.86rem' }}>
-          Issuing on Hedera testnet — real on-chain transactions, roughly 15–30 seconds.
+          Running the real underwriting policy. If it approves, a real bond is issued on Hedera testnet — real on-chain
+          transactions, roughly 15–30 seconds.
         </p>
       )}
 

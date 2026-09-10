@@ -24,6 +24,12 @@
   --radius: 14px;
   --radius-lg: 20px;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+
+  /* next/font supplies these; the stacks after them are real fallbacks
+     for the moment before the font loads (display: swap). */
+  --font-sans: var(--font-geist), -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: var(--font-pixelify), var(--font-geist), 'Segoe UI', sans-serif;
 }
 
 * {
@@ -39,7 +45,7 @@ body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.6;
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
@@ -170,7 +176,7 @@ em {
 
 code,
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 /* ==========================================================================
@@ -211,9 +217,10 @@ section,
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 720;
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
   color: var(--text);
 }
 
@@ -243,8 +250,9 @@ section,
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
   color: #0b0b0c;
   background: linear-gradient(145deg, #f0f0ea 0%, #b9b9b1 45%, #8d8d86 100%);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 2px 10px rgba(0, 0, 0, 0.5);
@@ -375,9 +383,10 @@ section,
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-size: 0.74rem;
-  font-weight: 620;
-  letter-spacing: 0.11em;
+  font-family: var(--font-display);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
@@ -585,6 +594,9 @@ label {
   margin: 0;
 }
 
+/* Operational figures (a business's actual revenue, volatility, history)
+   stay in Geist with tabular numerals — Pixelify's 5 and 8 are too easy to
+   confuse at a glance, and these are numbers someone might act on. */
 .stat {
   font-size: 1.6rem;
   font-weight: 690;
@@ -625,12 +637,21 @@ label {
   background: var(--surface-strong);
 }
 
+/* The headline platform counters are a display moment, so they do get the
+   pixel face — with extra tracking so digits stay individually legible. */
 .stat-card .stat {
-  font-size: 2.1rem;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
   background: linear-gradient(160deg, #ffffff 0%, var(--silver) 60%, #9a9a93 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.verdict-line {
+  font-family: var(--font-display);
 }
 
 /* ==========================================================================
@@ -683,7 +704,10 @@ label {
 }
 
 .pipeline-node {
-  flex: 1 1 132px;
+  /* Seven nodes plus six arrows have to fit one row at 1140px — a wrapped
+     final node stretches full width and reads as a layout bug. */
+  flex: 1 1 96px;
+  min-width: 0;
   background: var(--surface);
   backdrop-filter: blur(20px) saturate(1.3);
   -webkit-backdrop-filter: blur(20px) saturate(1.3);
@@ -730,8 +754,8 @@ label {
   align-items: center;
   justify-content: center;
   color: var(--gold);
-  font-size: 1.1rem;
-  padding: 0 6px;
+  font-size: 1rem;
+  padding: 0 3px;
   flex: 0 0 auto;
   animation: flowPulse 2.6s ease-in-out infinite;
   animation-delay: calc(var(--stagger, 0) * 220ms);
@@ -852,7 +876,7 @@ label {
 }
 
 .biz-card .issuer-id {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--text-dim);
   word-break: break-all;
@@ -922,7 +946,7 @@ dl.details dt {
 
 dl.details dd {
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.86rem;
   word-break: break-all;
   color: var(--text);
@@ -974,7 +998,7 @@ dl.details dd {
 }
 
 .data-table .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   color: var(--text-dim);
 }
@@ -1077,6 +1101,86 @@ dl.details dd {
   animation: spinSlow 0.8s linear infinite;
   display: inline-block;
   flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   Proof / verification rows
+   ========================================================================== */
+
+.proof-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.proof-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: inherit;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
+}
+
+.proof-row:hover {
+  transform: translateX(4px);
+  border-color: var(--border-strong);
+  background: var(--surface-strong);
+  color: inherit;
+}
+
+.proof-main {
+  min-width: 0;
+}
+
+.proof-label {
+  font-weight: 640;
+  font-size: 0.94rem;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.proof-value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--gold);
+  word-break: break-all;
+  margin-bottom: 5px;
+}
+
+.proof-note {
+  font-size: 0.83rem;
+  color: var(--text-dim);
+}
+
+.proof-arrow {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  flex: 0 0 auto;
+}
+
+.proof-row:hover .proof-arrow {
+  color: var(--gold);
+}
+
+.code-block {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--silver);
+  line-height: 1.6;
+  margin: 12px 0 0;
 }
 
 /* ==========================================================================

@@ -80,6 +80,16 @@ export default function DashboardPage() {
                     <span className="pill">{(b.couponBps / 100).toFixed(2)}% coupon</span>
                   )}
                 </div>
+                {b.bondTokenId && (
+                  <div style={{ marginTop: 12 }}>
+                    <span
+                      className="proof-value"
+                      style={{ display: 'inline-block', fontSize: '0.75rem', marginBottom: 0 }}
+                    >
+                      {b.bondTokenId} ↗ HashScan
+                    </span>
+                  </div>
+                )}
               </Link>
             );
           })}

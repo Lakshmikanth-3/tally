@@ -29,3 +29,7 @@ cre/*/*/.cre_build_tmp.js
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# Playwright e2e artifacts (regenerable)
+test-results/
+playwright-report/
