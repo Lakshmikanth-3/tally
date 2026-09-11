@@ -20,6 +20,9 @@ importers:
       '@tally/ats-client':
         specifier: workspace:*
         version: link:../../packages/ats-client
+      '@tally/scheduler':
+        specifier: workspace:*
+        version: link:../../packages/scheduler
       '@tally/seam':
         specifier: workspace:*
         version: link:../../packages/seam

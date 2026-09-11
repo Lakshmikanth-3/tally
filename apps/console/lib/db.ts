@@ -62,6 +62,9 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, 'transactions', 'source', "TEXT NOT NULL DEFAULT 'manual'");
   addColumnIfMissing(db, 'transactions', 'stripe_charge_id', 'TEXT');
   addColumnIfMissing(db, 'transactions', 'stripe_invoice_id', 'TEXT');
+  addColumnIfMissing(db, 'bonds', 'coupon_schedule_id', 'TEXT');
+  addColumnIfMissing(db, 'bonds', 'coupon_due_date_seconds', 'INTEGER');
+  addColumnIfMissing(db, 'bonds', 'coupon_amount_hbar', 'TEXT');
 
   // SQLite unique indexes treat NULL as distinct from every other value, so
   // manual transactions (stripe_charge_id IS NULL) are unaffected — this

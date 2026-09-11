@@ -140,8 +140,13 @@ test.describe('registration and underwriting', () => {
     await page.getByLabel('Business name').fill(name);
     await page.getByRole('button', { name: /Register/ }).click();
 
-    // Registration redirects to the new business's own real page.
-    await expect(page).toHaveURL(/\/business\/issuer-e2e-test-shop-/, { timeout: 20000 });
+    // Registration redirects to the new business's own real page. Next's
+    // client-side push() doesn't commit until that route's RSC payload
+    // arrives, so a cold dev-server compile of it (business/[issuerId]'s
+    // dependency graph has grown across several feature additions) is
+    // build cost baked into this wait, not app latency — same reasoning as
+    // this file's other generous timeouts.
+    await expect(page).toHaveURL(/\/business\/issuer-e2e-test-shop-/, { timeout: 60000 });
     await expect(page.getByRole('heading', { name })).toBeVisible();
 
     // A brand new business has no revenue — it must say so honestly.
@@ -177,7 +182,10 @@ test.describe('an issued bond', () => {
     test.skip(!hasIssuedBond, 'no issued bond in this database yet');
 
     await issued.click();
-    await expect(page.locator('.badge-success')).toContainText('Issued on Hedera testnet', { timeout: 240_000 });
+    // Not `.badge-success` alone: a business with more than one real
+    // underwriting run also shows one per row in Underwriting history —
+    // this scopes to BondPanel's specific badge text instead.
+    await expect(page.getByText('Issued on Hedera testnet')).toBeVisible({ timeout: 240_000 });
 
     // Bond tokens are ATS diamond contracts, not native HTS tokens — /contract/ is the real page.
     const tokenLink = page.locator('a[href*="hashscan.io/testnet/contract/"]');

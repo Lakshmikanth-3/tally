@@ -44,6 +44,9 @@ export interface BondRecord {
   startingDateSeconds: number | null;
   maturityDateSeconds: number | null;
   createdAt: number;
+  couponScheduleId: string | null;
+  couponDueDateSeconds: number | null;
+  couponAmountHbar: string | null;
 }
 
 function requireEnv(name: string): string {
@@ -74,7 +77,10 @@ function deriveBondCodes(issuerId: string): { symbol: string; isinIdentifier: st
   return { symbol, isinIdentifier };
 }
 
-function persistBond(record: Omit<BondRecord, 'createdAt'>): BondRecord {
+// Coupon-schedule fields are never set at issuance time — armCouponForBond
+// fills them in afterward, as a separate real action — so a freshly
+// persisted row never has them yet.
+function persistBond(record: Omit<BondRecord, 'createdAt' | 'couponScheduleId' | 'couponDueDateSeconds' | 'couponAmountHbar'>): BondRecord {
   const createdAt = Math.floor(Date.now() / 1000);
   getDb()
     .prepare(
@@ -100,7 +106,7 @@ function persistBond(record: Omit<BondRecord, 'createdAt'>): BondRecord {
       record.maturityDateSeconds,
       createdAt,
     );
-  return { ...record, createdAt };
+  return { ...record, createdAt, couponScheduleId: null, couponDueDateSeconds: null, couponAmountHbar: null };
 }
 
 interface BondRow {
@@ -118,6 +124,9 @@ interface BondRow {
   starting_date_seconds: number | null;
   maturity_date_seconds: number | null;
   created_at: number;
+  coupon_schedule_id: string | null;
+  coupon_due_date_seconds: number | null;
+  coupon_amount_hbar: string | null;
 }
 
 function rowToBondRecord(row: BondRow): BondRecord {
@@ -136,6 +145,9 @@ function rowToBondRecord(row: BondRow): BondRecord {
     startingDateSeconds: row.starting_date_seconds,
     maturityDateSeconds: row.maturity_date_seconds,
     createdAt: row.created_at,
+    couponScheduleId: row.coupon_schedule_id,
+    couponDueDateSeconds: row.coupon_due_date_seconds,
+    couponAmountHbar: row.coupon_amount_hbar,
   };
 }
 

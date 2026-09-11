@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CouponSchedulePanel from './CouponSchedulePanel';
 import PlaceOrderPanel from './PlaceOrderPanel';
 
 interface BondRecord {
@@ -18,6 +19,9 @@ interface BondRecord {
   startingDateSeconds: number | null;
   maturityDateSeconds: number | null;
   createdAt: number;
+  couponScheduleId: string | null;
+  couponDueDateSeconds: number | null;
+  couponAmountHbar: string | null;
 }
 
 // Mirrors @tally/seam's UnderwritingReasonCode — kept as a plain map here so
@@ -220,6 +224,12 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
             Coupon and redemption settlement run on their own real Hedera Scheduled Transaction schedule — not triggered
             by this button.
           </p>
+          <CouponSchedulePanel
+            issuerId={issuerId}
+            couponScheduleId={bond.couponScheduleId}
+            couponDueDateSeconds={bond.couponDueDateSeconds}
+            couponAmountHbar={bond.couponAmountHbar}
+          />
           <PlaceOrderPanel issuerId={issuerId} />
         </>
       )}
