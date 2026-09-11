@@ -100,6 +100,16 @@ test.describe('secondary market', () => {
     const hasEmptyState = await page.locator('.empty-state').isVisible().catch(() => false);
     expect(hasRows || hasEmptyState).toBe(true);
   });
+
+  test('offers a bid form when a real issued bond exists', async ({ page }) => {
+    await page.goto('/market');
+    const hasBidForm = await page.getByRole('heading', { name: 'Place a bid' }).isVisible().catch(() => false);
+    // Only real issued bonds populate the bid picker — this is conditional
+    // on real DB state, not something to force into existing either way.
+    if (hasBidForm) {
+      await expect(page.locator('select option')).not.toHaveCount(0);
+    }
+  });
 });
 
 test.describe('repayment register', () => {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import CouponSchedulePanel from './CouponSchedulePanel';
 import PlaceOrderPanel from './PlaceOrderPanel';
+import RedemptionPanel from './RedemptionPanel';
 
 interface BondRecord {
   issuerId: string;
@@ -22,6 +23,9 @@ interface BondRecord {
   couponScheduleId: string | null;
   couponDueDateSeconds: number | null;
   couponAmountHbar: string | null;
+  redeemedAt: number | null;
+  redeemTransactionId: string | null;
+  redeemOnTime: boolean | null;
 }
 
 // Mirrors @tally/seam's UnderwritingReasonCode — kept as a plain map here so
@@ -229,6 +233,13 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
             couponScheduleId={bond.couponScheduleId}
             couponDueDateSeconds={bond.couponDueDateSeconds}
             couponAmountHbar={bond.couponAmountHbar}
+          />
+          <RedemptionPanel
+            issuerId={issuerId}
+            maturityDateSeconds={bond.maturityDateSeconds}
+            redeemedAt={bond.redeemedAt}
+            redeemTransactionId={bond.redeemTransactionId}
+            redeemOnTime={bond.redeemOnTime}
           />
           <PlaceOrderPanel issuerId={issuerId} />
         </>
