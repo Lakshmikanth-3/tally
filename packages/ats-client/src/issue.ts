@@ -1,6 +1,7 @@
-import { Bond, CreateBondRequest, FixedRate, SetRateRequest } from '@hashgraph/asset-tokenization-sdk';
+import { Bond, ControlListRequest, CreateBondRequest, FixedRate, IssueRequest, Security, SetRateRequest } from '@hashgraph/asset-tokenization-sdk';
 import { ATS_TESTNET } from './init';
 import { resolveLatestBondConfigVersion } from './config-version';
+import { grantInternalKyc } from './kyc';
 import { ensureRoleGranted } from './roles';
 
 const USD_CURRENCY_BYTES3 = '0x555344'; // hex of ASCII "USD", per FormatValidation.checkBytes3Format
@@ -12,6 +13,17 @@ const USD_CURRENCY_BYTES3 = '0x555344'; // hex of ASCII "USD", per FormatValidat
 // internal domain/context/security/SecurityRole.ts enum.
 const INTEREST_RATE_MANAGER_ROLE = '0xfa80c71f8de1628faf2c0e9bd02c2f4a3da1f16823b75e61e84b90164a07b4a4';
 
+// [VERIFIED against real source: SecurityRole.js, same pattern as above]
+// The role IssueCommandHandler checks for (_ISSUER_ROLE or _AGENT_ROLE) —
+// nothing grants this automatically either, same gap as the rate-manager
+// role above and redeem.ts's own role grants.
+const ISSUER_ROLE = '0x5eeaf5602c75bf26e73b5206d0bd6ee82f621166255e5fd73cc06bc7bd84a95f';
+
+// Same real role redeem.ts already grants for the same isWhiteList: true
+// reason — the treasury account receiving the minted unit is no exception
+// to the control-list gate.
+const CONTROLLIST_ROLE = '0x6ed9a91e996c6475ecdc28ecbdbe9bd1122fc62b30cdbe6da8271884b51ec74d';
+
 export interface IssueBondParams {
   issuerAccountId: string; // diamondOwnerAccount — Hedera id of the issuing business
   issuerEvmAddress: string; // same account's EVM address — Role.grantRole targets accounts by EVM address, not Hedera id
@@ -22,6 +34,7 @@ export interface IssueBondParams {
   couponBps: number; // frozen at issuance from the CRE verdict — see @tally/seam UnderwritingVerdict
   startingDateSeconds: number;
   maturityDateSeconds: number;
+  issuerPrivateKeyHex: string; // same account as issuerAccountId/issuerEvmAddress — self-signs the internal-KYC verifiable credential the mint step needs (see kyc.ts)
 }
 
 export interface IssuedBond {
@@ -105,6 +118,49 @@ export async function issueFixedRateBond(params: IssueBondParams): Promise<Issue
       rate: String(params.couponBps),
       rateDecimals: RATE_DECIMALS,
     }),
+  );
+
+  // [VERIFIED against real source and a real live query] Bond.create alone
+  // never mints anything — `numberOfUnits` above is a bond-terms field, not
+  // a mint call. Confirmed live: a bond issued through this function before
+  // this block existed had a real, permanent totalSupply() of 0 on Hedera
+  // testnet. The treasury (the same custodian account as issuerEvmAddress)
+  // needs the same three real gates redeem.ts already established for a
+  // *source* account under this SDK's isWhiteList/internalKycActivated
+  // settings — control-list membership, the issuer role, and a real
+  // self-signed KYC credential — before Security.issue will mint to it.
+  // addToControlList is itself gated by _CONTROLLIST_ROLE (same real gap as
+  // redeem.ts's identical grant), so this has to run before the membership
+  // check/add below, not after.
+  await ensureRoleGranted(createResult.security.diamondAddress, params.issuerEvmAddress, CONTROLLIST_ROLE);
+  await ensureRoleGranted(createResult.security.diamondAddress, params.issuerEvmAddress, ISSUER_ROLE);
+
+  const alreadyListed = await Security.isAccountInControlList(
+    new ControlListRequest({ securityId: createResult.security.diamondAddress, targetId: params.issuerEvmAddress }),
+  );
+  if (!alreadyListed) {
+    await Security.addToControlList(
+      new ControlListRequest({ securityId: createResult.security.diamondAddress, targetId: params.issuerEvmAddress }),
+    );
+  }
+
+  await grantInternalKyc({
+    securityId: createResult.security.diamondAddress,
+    issuerPrivateKeyHex: params.issuerPrivateKeyHex,
+    issuerEvmAddress: params.issuerEvmAddress,
+    targetEvmAddress: params.issuerEvmAddress,
+  });
+
+  // [VERIFIED via a real failed attempt] `numberOfUnits: '1'` above registers
+  // maxSupply as a raw integer count of 1 (NOT scaled by the security's
+  // decimals=6), but IssueCommandHandler always parses `amount` through
+  // BigDecimal.fromString(amount, security.decimals) before comparing —
+  // amount: '1' becomes a raw 1_000_000, which is 1,000,000x maxSupply.
+  // Confirmed live: reverted with the real custom error MaxSupplyReached()
+  // until amount was expressed as one raw unit at 6 decimals (0.000001),
+  // which is what actually parses back down to raw 1.
+  await Security.issue(
+    new IssueRequest({ securityId: createResult.security.diamondAddress, targetId: params.issuerEvmAddress, amount: '0.000001' }),
   );
 
   return {

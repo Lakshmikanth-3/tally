@@ -94,28 +94,24 @@ function persistBond(record: Omit<BondRecord, 'createdAt'>): BondRecord {
   return { ...record, createdAt };
 }
 
-export function getLatestBond(issuerId: string): BondRecord | null {
-  const row = getDb()
-    .prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC LIMIT 1')
-    .get(issuerId) as
-    | {
-        issuer_id: string;
-        status: BondRecord['status'];
-        reason_code: number;
-        coupon_bps: number | null;
-        face_value_usd: string | null;
-        symbol: string | null;
-        isin: string | null;
-        bond_token_id: string | null;
-        evm_diamond_address: string | null;
-        transaction_id: string | null;
-        error_message: string | null;
-        starting_date_seconds: number | null;
-        maturity_date_seconds: number | null;
-        created_at: number;
-      }
-    | undefined;
-  if (!row) return null;
+interface BondRow {
+  issuer_id: string;
+  status: BondRecord['status'];
+  reason_code: number;
+  coupon_bps: number | null;
+  face_value_usd: string | null;
+  symbol: string | null;
+  isin: string | null;
+  bond_token_id: string | null;
+  evm_diamond_address: string | null;
+  transaction_id: string | null;
+  error_message: string | null;
+  starting_date_seconds: number | null;
+  maturity_date_seconds: number | null;
+  created_at: number;
+}
+
+function rowToBondRecord(row: BondRow): BondRecord {
   return {
     issuerId: row.issuer_id,
     status: row.status,
@@ -132,6 +128,21 @@ export function getLatestBond(issuerId: string): BondRecord | null {
     maturityDateSeconds: row.maturity_date_seconds,
     createdAt: row.created_at,
   };
+}
+
+export function getLatestBond(issuerId: string): BondRecord | null {
+  const row = getDb().prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC LIMIT 1').get(issuerId) as
+    | BondRow
+    | undefined;
+  return row ? rowToBondRecord(row) : null;
+}
+
+/// Every real underwriting run for this issuer, newest first — the bonds
+/// table is insert-only per run (declined/issued/failed), so this is
+/// already a true history, not a derived or reconstructed one.
+export function listBondsForIssuer(issuerId: string): BondRecord[] {
+  const rows = getDb().prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC').all(issuerId) as BondRow[];
+  return rows.map(rowToBondRecord);
 }
 
 /// Runs the real underwriting verdict against this business's real revenue
@@ -184,6 +195,7 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
     couponBps,
     startingDateSeconds,
     maturityDateSeconds,
+    issuerPrivateKeyHex: custodian.privateKeyHex,
   };
 
   let issued: IssuedBond;
