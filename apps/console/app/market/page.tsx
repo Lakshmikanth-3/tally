@@ -83,11 +83,13 @@ export default async function MarketPage() {
       <section style={{ marginTop: 40 }}>
         <h2>Why a fill might revert</h2>
         <p style={{ fontSize: '0.87rem' }}>
-          Listing an ask now deposits the maker&apos;s held unit into the SecondaryMarket contract&apos;s own balance
-          first, so <code>fillOrder</code> pays out of a real escrowed balance rather than an empty one — confirmed
-          live end to end, including a fully successful fill. A fill still reverts, honestly, whenever the taker
-          isn&apos;t control-listed and KYC&apos;d on that specific bond&apos;s ATS security — the same real
-          compliance-enforcement path the resale demo is about, just no longer the only reachable outcome.
+          Listing an ask deposits the maker&apos;s held unit into the SecondaryMarket contract&apos;s own balance
+          first, so <code>fillOrder</code> pays out of a real escrowed balance rather than an empty one. Verified live
+          against the exact same escrowed order, both real outcomes: Tally&apos;s custodian (already control-listed
+          and KYC&apos;d on the security) filled it successfully, and a second, genuinely independent testnet account
+          — never granted KYC or added to that bond&apos;s control list — reverted with the real ATS compliance error
+          <code>&quot;transfer restricted: counterparty not compliant&quot;</code>. That second case is the actual
+          rejected-unverified-counterparty demo, not a stand-in for it.
         </p>
       </section>
     </main>

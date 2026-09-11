@@ -202,20 +202,21 @@ export interface FillOrderResult {
 /// function doesn't pre-check anything, it surfaces whatever the chain
 /// itself decides, honestly, whether that's success or a real revert.
 ///
-/// [VERIFIED via a real live round trip] A listed ask now deposits the
-/// maker's real held unit into the SecondaryMarket contract's own balance
-/// first (see ats-client's deposit.ts, called from lib/bonds.ts's
-/// depositBondForResale) — `fillOrder`'s `bondToken.call(transfer(taker,
-/// quantity))` runs with the contract itself as caller, so it pays out of
-/// that real escrowed balance. Confirmed live end to end: an order listed
-/// and deposited this way filled successfully (`success: true`), moving
-/// the real token from the contract to the taker on Hedera testnet — the
-/// first genuinely completed resale in this project, not just the
-/// rejection path. A taker who isn't control-listed/KYC'd on this specific
-/// security still reverts here, honestly, with the real ATS compliance
-/// error — that's still the same real enforcement path the PRD's
-/// rejected-fill demo describes, just no longer the *only* reachable
-/// outcome.
+/// [VERIFIED via two real, contrasting live fills] A listed ask now
+/// deposits the maker's real held unit into the SecondaryMarket
+/// contract's own balance first (see ats-client's deposit.ts, called from
+/// lib/bonds.ts's depositBondForResale) — `fillOrder`'s `bondToken.call(
+/// transfer(taker, quantity))` runs with the contract itself as caller,
+/// so it pays out of that real escrowed balance. Confirmed live, against
+/// the exact same escrowed order, both real outcomes this contract can
+/// produce: Tally's own custodian (already control-listed/KYC'd on the
+/// security) filled successfully (`success: true`), moving the real
+/// token from the contract to the taker on Hedera testnet; a second,
+/// genuinely independent testnet account (never granted KYC or added to
+/// this bond's control list) reverted with the real ATS compliance error
+/// `"transfer restricted: counterparty not compliant"` — the actual
+/// rejected-unverified-counterparty demo the PRD describes, not a stand-in
+/// for it.
 export async function fillMarketOrder(orderId: string, takerPrivateKeyHex: string): Promise<FillOrderResult> {
   const wallet = new ethers.Wallet(takerPrivateKeyHex, getProvider());
   const contract = getContract(wallet);

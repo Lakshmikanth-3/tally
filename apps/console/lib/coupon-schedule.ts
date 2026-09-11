@@ -41,11 +41,12 @@ export interface ArmedCouponResult {
 
 /// Arms a real Hedera Scheduled Transaction for this bond's coupon,
 /// expiring (and self-executing, no keeper) at its real maturity date. The
-/// treasury and bondholder are the same custodian account for now — this
-/// console has no separate bondholder account yet (see the "unverified
-/// counterparty" gap noted on /market) — so this is a real transfer, just
-/// a self-transfer, which Hedera schedules and executes exactly the same
-/// as it would a distinct payer/payee.
+/// bondholder is a real, distinct, independently-funded testnet account
+/// (SECOND_ACCOUNT_*) — not the custodian paying itself — so the scheduled
+/// transfer is a genuine payer/payee HBAR transfer between two different
+/// real accounts. Falls back to the custodian as its own bondholder only
+/// if that second account was never configured, so this still works
+/// before it exists.
 export async function armCouponForBond(issuerId: string): Promise<ArmedCouponResult> {
   const bond = getLatestBond(issuerId);
   if (!bond || bond.status !== 'issued' || !bond.startingDateSeconds || !bond.maturityDateSeconds || !bond.couponBps || !bond.faceValueUsd) {
@@ -54,6 +55,7 @@ export async function armCouponForBond(issuerId: string): Promise<ArmedCouponRes
 
   const accountId = requireEnv('HEDERA_ECDSA_ACCOUNT_ID');
   const privateKeyHex = requireEnv('HEDERA_ECDSA_PRIVATE_KEY');
+  const bondholderAccountId = process.env.SECOND_ACCOUNT_ID || accountId;
 
   const amountUsd = computeCouponAmountUsd(bond.faceValueUsd, bond.couponBps, bond.startingDateSeconds, bond.maturityDateSeconds);
   const hbarPerUsd = await fetchHbarPerUsd();
@@ -69,7 +71,7 @@ export async function armCouponForBond(issuerId: string): Promise<ArmedCouponRes
     try {
       armed = await armCouponPayment(client, {
         treasuryAccountId: accountId,
-        bondholderAccountId: accountId,
+        bondholderAccountId,
         amountHbar,
         dueDateSeconds: bond.maturityDateSeconds,
         memo: `tally-coupon-${issuerId}`,
