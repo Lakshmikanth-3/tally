@@ -3,13 +3,16 @@
 import { useState } from 'react';
 
 /// Places a real ask on the real SecondaryMarket contract for this
-/// business's issued bond, signed by Tally's custodian key. See
-/// lib/secondary-market.ts and /market for the real order book and why a
-/// fill against it currently reverts (no deposit step exists yet).
+/// business's issued bond, signed by Tally's custodian key, then deposits
+/// the held unit into the contract's own balance so a fill against it can
+/// actually succeed — see lib/secondary-market.ts, ats-client's deposit.ts,
+/// and /market for the real order book.
 export default function PlaceOrderPanel({ issuerId }: { issuerId: string }) {
   const [priceUSD, setPriceUSD] = useState('');
   const [placing, setPlacing] = useState(false);
-  const [result, setResult] = useState<{ orderId: string; transactionId: string } | null>(null);
+  const [result, setResult] = useState<{ orderId: string; transactionId: string; depositTransactionId: string | null; depositError: string | null } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   async function handlePlace() {
@@ -44,10 +47,20 @@ export default function PlaceOrderPanel({ issuerId }: { issuerId: string }) {
         Secondary market
       </p>
       {result ? (
-        <p style={{ fontSize: '0.85rem', color: 'var(--success)' }}>
-          ✓ Real ask placed on-chain — order <code className="mono">{result.orderId.slice(0, 12)}…</code>.{' '}
-          <a href="/market">View the order book →</a>
-        </p>
+        <div style={{ fontSize: '0.85rem' }}>
+          <p style={{ color: 'var(--success)', margin: 0 }}>
+            ✓ Real ask placed on-chain — order <code className="mono">{result.orderId.slice(0, 12)}…</code>.{' '}
+            <a href="/market">View the order book →</a>
+          </p>
+          {result.depositTransactionId && (
+            <p style={{ color: 'var(--success)', marginTop: 6 }}>✓ Unit escrowed to the market contract — this order can now actually fill.</p>
+          )}
+          {result.depositError && (
+            <p role="alert" style={{ marginTop: 6 }}>
+              Listed, but escrow deposit failed: {result.depositError} — this order will revert on fill until deposited.
+            </p>
+          )}
+        </div>
       ) : (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input

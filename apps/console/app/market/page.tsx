@@ -71,13 +71,11 @@ export default async function MarketPage() {
       <section style={{ marginTop: 40 }}>
         <h2>Why a fill might revert</h2>
         <p style={{ fontSize: '0.87rem' }}>
-          <code>fillOrder</code> moves tokens out of the SecondaryMarket contract&apos;s own balance, not the order
-          maker&apos;s — placing an order records intent only, it never deposits tokens. Until a real deposit step
-          whitelists the contract on a bond&apos;s ATS control list, every fill reverts with the real ATS compliance
-          error <code>&quot;transfer restricted: counterparty not compliant&quot;</code> — confirmed live, including
-          against Tally&apos;s own already-KYC&apos;d custodian account. That revert is the same real enforcement path
-          the compliance-rejection demo is about; it just currently triggers on the contract&apos;s own status rather
-          than a specific unverified taker.
+          Listing an ask now deposits the maker&apos;s held unit into the SecondaryMarket contract&apos;s own balance
+          first, so <code>fillOrder</code> pays out of a real escrowed balance rather than an empty one — confirmed
+          live end to end, including a fully successful fill. A fill still reverts, honestly, whenever the taker
+          isn&apos;t control-listed and KYC&apos;d on that specific bond&apos;s ATS security — the same real
+          compliance-enforcement path the resale demo is about, just no longer the only reachable outcome.
         </p>
       </section>
     </main>

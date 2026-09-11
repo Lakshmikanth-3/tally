@@ -202,20 +202,20 @@ export interface FillOrderResult {
 /// function doesn't pre-check anything, it surfaces whatever the chain
 /// itself decides, honestly, whether that's success or a real revert.
 ///
-/// [VERIFIED via a real live fill attempt] `fillOrder`'s `bondToken.call(
-/// transfer(taker, quantity))` runs with the SecondaryMarket *contract*
-/// itself as the caller, so it moves tokens out of the contract's own
-/// balance — not the maker's. No deposit/escrow step exists yet (placing
-/// an order never moves tokens), so today every fill reverts with the
-/// real ATS compliance error `"transfer restricted: counterparty not
-/// compliant"`, confirmed live — even for Tally's own already-KYC'd
-/// custodian — because the SecondaryMarket contract's address was never
-/// added to the bond's control list. That revert is genuinely the same
-/// real ATS enforcement path the PRD's rejected-fill demo describes, just
-/// triggered by the contract's own compliance status rather than a
-/// specific unverified taker; a completable "successful resale" would
-/// additionally need a real deposit (whitelisting the contract address on
-/// the bond, then a real ATS transfer into its balance) — not built here.
+/// [VERIFIED via a real live round trip] A listed ask now deposits the
+/// maker's real held unit into the SecondaryMarket contract's own balance
+/// first (see ats-client's deposit.ts, called from lib/bonds.ts's
+/// depositBondForResale) — `fillOrder`'s `bondToken.call(transfer(taker,
+/// quantity))` runs with the contract itself as caller, so it pays out of
+/// that real escrowed balance. Confirmed live end to end: an order listed
+/// and deposited this way filled successfully (`success: true`), moving
+/// the real token from the contract to the taker on Hedera testnet — the
+/// first genuinely completed resale in this project, not just the
+/// rejection path. A taker who isn't control-listed/KYC'd on this specific
+/// security still reverts here, honestly, with the real ATS compliance
+/// error — that's still the same real enforcement path the PRD's
+/// rejected-fill demo describes, just no longer the *only* reachable
+/// outcome.
 export async function fillMarketOrder(orderId: string, takerPrivateKeyHex: string): Promise<FillOrderResult> {
   const wallet = new ethers.Wallet(takerPrivateKeyHex, getProvider());
   const contract = getContract(wallet);

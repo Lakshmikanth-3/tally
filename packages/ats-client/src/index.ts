@@ -4,3 +4,4 @@ export * from './redeem';
 export * from './config-version';
 export * from './isin';
 export * from './kyc';
+export * from './deposit';

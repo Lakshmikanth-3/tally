@@ -12,7 +12,7 @@
 // by runner.ts — a minimal EIP-1193 provider backed by a real ethers.Wallet
 // on the Node side. The SDK itself runs completely unmodified, exactly as
 // it's designed to.
-import { connectAtsBackend, issueFixedRateBond, redeemBondAtMaturity, resolveLatestBondConfigVersion } from '../src';
+import { connectAtsBackend, depositBondToMarket, issueFixedRateBond, redeemBondAtMaturity, resolveLatestBondConfigVersion } from '../src';
 
 declare global {
   interface Window {
@@ -21,8 +21,9 @@ declare global {
       issueFixedRateBond: typeof issueFixedRateBond;
       redeemBondAtMaturity: typeof redeemBondAtMaturity;
       resolveLatestBondConfigVersion: typeof resolveLatestBondConfigVersion;
+      depositBondToMarket: typeof depositBondToMarket;
     };
   }
 }
 
-window.__tally = { connectAtsBackend, issueFixedRateBond, redeemBondAtMaturity, resolveLatestBondConfigVersion };
+window.__tally = { connectAtsBackend, issueFixedRateBond, redeemBondAtMaturity, resolveLatestBondConfigVersion, depositBondToMarket };

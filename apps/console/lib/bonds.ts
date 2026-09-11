@@ -1,7 +1,15 @@
 import path from 'node:path';
 import { UnderwritingReasonCode } from '@tally/seam';
 import { classifyDecline, computeDiscountRate } from '@tally/underwriting';
-import { ATS_TESTNET, buildIsin, issueFixedRateBond, type IssueBondParams, type IssuedBond } from '@tally/ats-client';
+import {
+  ATS_TESTNET,
+  buildIsin,
+  issueFixedRateBond,
+  type DepositToMarketParams,
+  type DepositToMarketResult,
+  type IssueBondParams,
+  type IssuedBond,
+} from '@tally/ats-client';
 import { startBrowserSignerSession } from '@tally/ats-client/browser-runner/runner';
 import { getDb } from './db';
 import { getBusiness, getRevenueSnapshot } from './business';
@@ -14,6 +22,7 @@ import { getBusiness, getRevenueSnapshot } from './business';
 interface TallyWindowBridge {
   connectAtsBackend: (creds: { accountId: string; evmAddress: string; privateKeyHex: string }) => Promise<unknown>;
   issueFixedRateBond: (params: IssueBondParams) => Promise<IssuedBond>;
+  depositBondToMarket: (params: DepositToMarketParams) => Promise<DepositToMarketResult>;
 }
 
 const USD_SCALE = 1_000_000n;
@@ -266,4 +275,57 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
     startingDateSeconds,
     maturityDateSeconds,
   });
+}
+
+const SECONDARY_MARKET_EVM_ADDRESS = '0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1'; // same deployed contract as lib/secondary-market.ts
+
+/// Moves the custodian's real held bond unit into the SecondaryMarket
+/// contract's own balance — the real escrow step a listed order needs
+/// before any fill against it can ever succeed (see ats-client's
+/// deposit.ts for why: SecondaryMarket.sol's fillOrder pays out of its own
+/// balance, and nothing moved tokens into that balance until now). Same
+/// real headless-browser signer session issuance already uses — this is a
+/// state-changing ATS call, not something a raw RPC call can make on its
+/// own behalf.
+export async function depositBondForResale(bondTokenId: string): Promise<DepositToMarketResult> {
+  const custodian = getCustodian();
+
+  const session = await startBrowserSignerSession({
+    privateKeyHex: custodian.privateKeyHex,
+    rpcUrl: ATS_TESTNET.rpcNodeUrl,
+    bundlePath: path.join(process.cwd(), '..', '..', 'packages', 'ats-client', 'browser-runner', 'dist', 'entry.js'),
+  });
+  try {
+    const connectResult = await session.page.evaluate(async (creds) => {
+      try {
+        await (window as unknown as { __tally: TallyWindowBridge }).__tally.connectAtsBackend(creds);
+        return { ok: true as const };
+      } catch (err) {
+        return { ok: false as const, error: (err as Error).message };
+      }
+    }, custodian);
+    if (!connectResult.ok) throw new Error(`connecting to ATS backend failed: ${connectResult.error}`);
+
+    const depositParams: DepositToMarketParams = {
+      securityId: bondTokenId,
+      sourcePrivateKeyHex: custodian.privateKeyHex,
+      sourceEvmAddress: custodian.evmAddress,
+      marketEvmAddress: SECONDARY_MARKET_EVM_ADDRESS,
+      amount: '0.000001', // one raw unit at this security's 6 decimals — see ats-client's issue.ts for why '1' overflows maxSupply
+    };
+
+    const depositResult = await session.page.evaluate(async (params) => {
+      try {
+        const res = await (window as unknown as { __tally: TallyWindowBridge }).__tally.depositBondToMarket(params);
+        return { ok: true as const, res };
+      } catch (err) {
+        return { ok: false as const, error: (err as Error).message };
+      }
+    }, depositParams);
+    if (!depositResult.ok) throw new Error(`depositing bond to market failed: ${depositResult.error}`);
+
+    return depositResult.res;
+  } finally {
+    await session.close();
+  }
 }
