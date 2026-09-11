@@ -1,5 +1,7 @@
-import { listMarketOrders } from '@/lib/secondary-market';
+import { listAllIssuedBonds } from '@/lib/bonds';
+import { computeBondId, listMarketOrders } from '@/lib/secondary-market';
 import MarketFillPanel from './MarketFillPanel';
+import PlaceBidPanel from './PlaceBidPanel';
 
 function formatMicrosUSD(microsStr: string): string {
   return (Number(BigInt(microsStr)) / 1_000_000).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
@@ -17,6 +19,14 @@ export default async function MarketPage() {
   } catch (err) {
     loadError = (err as Error).message;
   }
+
+  const bidCandidates = listAllIssuedBonds()
+    .filter((b) => b.evmDiamondAddress && b.bondTokenId)
+    .map((b) => ({
+      bondId: computeBondId(b.evmDiamondAddress!, b.bondTokenId!),
+      bondToken: b.evmDiamondAddress!,
+      label: `${b.symbol} — ${b.bondTokenId}`,
+    }));
 
   return (
     <main className="page-wide">
@@ -67,6 +77,8 @@ export default async function MarketPage() {
           </table>
         </div>
       )}
+
+      <PlaceBidPanel candidates={bidCandidates} />
 
       <section style={{ marginTop: 40 }}>
         <h2>Why a fill might revert</h2>
