@@ -5,6 +5,7 @@ import { computeBondId } from '@/lib/secondary-market';
 import { getStripeAccountCountry, isStripeTestMode } from '@/lib/stripe';
 import BondPanel from './BondPanel';
 import LifecycleTimeline from './LifecycleTimeline';
+import UnderwritingHistory from './UnderwritingHistory';
 import StripeTransactionsPanel from './StripeTransactionsPanel';
 
 function formatMicrosUSD(micros: bigint): string {
@@ -114,6 +115,8 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
       {stripeAccountId && <StripeTransactionsPanel issuerId={issuerId} canGenerate={canGenerateTestData} />}
 
       <BondPanel issuerId={issuerId} />
+
+      <UnderwritingHistory issuerId={issuerId} />
 
       {(() => {
         const bond = getLatestBond(issuerId);
