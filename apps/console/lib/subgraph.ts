@@ -1,4 +1,4 @@
-const SUBGRAPH_QUERY_URL = 'https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.1';
+const SUBGRAPH_QUERY_URL = 'https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.2';
 
 export interface LifecycleEvent {
   id: string;

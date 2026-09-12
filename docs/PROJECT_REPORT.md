@@ -136,7 +136,7 @@ separately wasn't necessary. Listed here for honesty, not hidden.
 ### 5.2 The Graph subgraph
 
 - Deployed live: https://thegraph.com/studio/subgraph/tally-register
-- Query endpoint: `https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.1`
+- Query endpoint: `https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.2`
 - Schema: `Bond`, `LifecycleEvent`, `IssuerStanding` — the same shape for
   every issuer, satisfying the "standardized schema across issuers" proof.
 - **Verified live** (2026-09-10): a real query against the deployed endpoint

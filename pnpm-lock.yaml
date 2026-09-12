@@ -32,6 +32,9 @@ importers:
       better-sqlite3:
         specifier: ^11.3.0
         version: 11.10.0
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       ethers:
         specifier: ^6.15.0
         version: 6.17.0

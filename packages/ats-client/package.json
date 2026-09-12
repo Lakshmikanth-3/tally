@@ -5,7 +5,9 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "node browser-runner/build.mjs",
+    "postinstall": "node browser-runner/build.mjs"
   },
   "dependencies": {
     "@hashgraph/asset-tokenization-sdk": "8.0.0",

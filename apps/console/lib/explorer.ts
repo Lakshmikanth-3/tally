@@ -7,7 +7,7 @@ export const HASHSCAN_TESTNET = 'https://hashscan.io/testnet';
 export const ETHERSCAN_SEPOLIA = 'https://sepolia.etherscan.io';
 
 export const SUBGRAPH_STUDIO_URL = 'https://thegraph.com/studio/subgraph/tally-register';
-export const SUBGRAPH_QUERY_URL = 'https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.1';
+export const SUBGRAPH_QUERY_URL = 'https://api.studio.thegraph.com/query/1758893/tally-register/v0.0.2';
 
 export function hashscanContract(hederaId: string): string {
   return `${HASHSCAN_TESTNET}/contract/${hederaId}`;
