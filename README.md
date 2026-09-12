@@ -34,12 +34,11 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
   at expiry with zero bot/cron infrastructure, and the resulting on-time/late
   status is derived from the mirror node's real consensus timestamps, never
   hand-set.
-- **On-chain infra** — `SettlementAnchor` + `SecondaryMarket` (Foundry, 6
-  passing tests) deployed to both Hedera testnet (`0.0.10410671` /
-  `0.0.10410672`, the real product deployment) and Ethereum Sepolia (same
-  deterministic addresses) — the Sepolia copy exists solely because Subgraph
-  Studio doesn't support Hedera as an indexable network (see
-  `FEEDBACK/THEGRAPH.md`).
+- **On-chain infra** — `SettlementAnchor` + `SecondaryMarket` (Foundry, 8
+  passing tests) deployed to both Hedera testnet (`0.0.10501789` /
+  `0.0.10501801`, the real product deployment) and Ethereum Sepolia — the
+  Sepolia copy exists solely because Subgraph Studio doesn't support Hedera
+  as an indexable network (see `FEEDBACK/THEGRAPH.md`).
 - **Subgraph** — deployed live: https://thegraph.com/studio/subgraph/tally-register,
   indexing lifecycle events from the Sepolia deployment above.
 - **Chainlink CRE confidential workflow** (`cre/tally-cre`) — fetches a

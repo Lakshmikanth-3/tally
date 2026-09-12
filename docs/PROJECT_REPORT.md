@@ -117,17 +117,21 @@ separately wasn't necessary. Listed here for honesty, not hidden.
   restriction — an unverified counterparty's fill genuinely reverts on-chain
   (this contract doesn't duplicate that check, it relies on ATS's real
   enforcement being the source of truth).
-- **6 passing Foundry tests**, including the load-bearing one: an
+- **8 passing Foundry tests**, including the load-bearing ones: an
   unverified counterparty's `fillOrder` call reverts with the real ATS
-  revert reason.
+  revert reason, and (added when the bid-fill payout direction was fixed)
+  a bid's payout goes to its maker rather than whoever fills it, and reverts
+  if the maker isn't a verified holder.
 - **Deployed twice, deliberately:**
   - Hedera testnet (the real product deployment): `SettlementAnchor`
-    `0.0.10410671`, `SecondaryMarket` `0.0.10410672`
-  - Ethereum Sepolia (same deterministic CREATE addresses,
-    `0x7FF282B4BEc3b2fE58981441317B5892E23361C2` /
-    `0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1`) — purely because Subgraph
-    Studio does not support Hedera as an indexable network (verified against
-    their own supported-networks list). See `FEEDBACK/THEGRAPH.md`.
+    `0.0.10501789`, `SecondaryMarket` `0.0.10501801`
+  - Ethereum Sepolia (`0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4` /
+    `0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4`, deployed from the same
+    custodian account as the Hedera copy but not at the same CREATE address,
+    since that depends on the account's nonce on each chain) — purely
+    because Subgraph Studio does not support Hedera as an indexable network
+    (verified against their own supported-networks list). See
+    `FEEDBACK/THEGRAPH.md`.
 
 ### 5.2 The Graph subgraph
 
@@ -243,9 +247,9 @@ signing service, Tally built its own solution:
 
 | Artifact | Value |
 |---|---|
-| Hedera testnet `SettlementAnchor` | `0.0.10410671` |
-| Hedera testnet `SecondaryMarket` | `0.0.10410672` |
-| Sepolia mirror deployment (indexed) | `0x7FF282B4BEc3b2fE58981441317B5892E23361C2` / `0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1` |
+| Hedera testnet `SettlementAnchor` | `0.0.10501789` |
+| Hedera testnet `SecondaryMarket` | `0.0.10501801` |
+| Sepolia mirror deployment (indexed) | `0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4` / `0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4` |
 | Live subgraph | https://thegraph.com/studio/subgraph/tally-register |
 | Example issued bond (Hedera testnet) | `0.0.10425775` |
 | Custodian account (Hedera testnet ECDSA) | `0.0.8050897` / `0xcfFc4DA1Cb5C88152e5f90994048f363Bd715777` |
@@ -255,7 +259,7 @@ signing service, Tally built its own solution:
 
 - 53 commits, small and feature-scoped, real timestamps
 - 26 passing unit tests (`packages/seam`, `packages/underwriting`,
-  `packages/scheduler`) + 6 passing Foundry contract tests
+  `packages/scheduler`) + 8 passing Foundry contract tests
 - All packages and the console app typecheck clean under TypeScript strict
   mode
 

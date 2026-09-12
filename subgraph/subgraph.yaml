@@ -6,9 +6,9 @@ dataSources:
     name: SettlementAnchor
     network: sepolia
     source:
-      address: "0x7FF282B4BEc3b2fE58981441317B5892E23361C2"
+      address: "0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4"
       abi: SettlementAnchor
-      startBlock: 11656172
+      startBlock: 11689158
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

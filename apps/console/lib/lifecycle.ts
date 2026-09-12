@@ -5,7 +5,7 @@ import { armCouponForBond } from './coupon-schedule';
 import { redeemBondForBusiness } from './redemption';
 import { computeBondId } from './secondary-market';
 
-const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10410671'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
+const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10501789'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
 
 export interface LifecycleRunSummary {
   armedCoupons: string[];

@@ -21,11 +21,11 @@ register per issuer.
    verified this directly against Studio's own supported-networks list
    before building anything, which meant deciding up front how to still get
    real subgraph indexing for a Hedera-native product. Our real solution:
-   `SettlementAnchor` and `SecondaryMarket` are deployed *twice* with the
-   same deterministic CREATE addresses (`0x7FF282B4BEc3b2fE58981441317B5892E23361C2`
-   / `0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1`) — once on Hedera testnet
-   as the real product deployment or issuers actually issue against
-   (`0.0.10410671` / `0.0.10410672`), and once on Ethereum Sepolia purely so
+   `SettlementAnchor` and `SecondaryMarket` are deployed *twice* from the
+   same custodian account (`0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4`
+   / `0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4` on Sepolia) — once on Hedera
+   testnet as the real product deployment issuers actually issue against
+   (`0.0.10501789` / `0.0.10501801`), and once on Ethereum Sepolia purely so
    the subgraph has a supported network to index. This is a real, working
    solution, but it's a genuine architectural compromise a Hedera-native
    project shouldn't have to make: the "real" event stream a bond's lifecycle

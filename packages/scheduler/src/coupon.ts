@@ -20,7 +20,7 @@ export enum EventKind {
 }
 
 export interface AnchorCallParams {
-  settlementAnchorContractId: string; // Hedera-format id, e.g. "0.0.10410671" — the REAL Hedera-deployed anchor, not the Sepolia copy used for subgraph indexing
+  settlementAnchorContractId: string; // Hedera-format id, e.g. "0.0.10501789" — the REAL Hedera-deployed anchor, not the Sepolia copy used for subgraph indexing
   bondId: Uint8Array; // 32 bytes
   issuerEvmAddress: string; // 0x-prefixed, 20 bytes
   kind: EventKind;

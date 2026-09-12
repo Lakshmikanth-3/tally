@@ -37,6 +37,11 @@ contract SecondaryMarketTest is Test {
         orderId = market.placeOrder(BOND_ID, address(token), PRICE, QTY, false);
     }
 
+    function _placeBid(address bidder) internal returns (bytes32 orderId) {
+        vm.prank(bidder);
+        orderId = market.placeOrder(BOND_ID, address(token), PRICE, QTY, true);
+    }
+
     /// THE core proof: an unverified counterparty's fill reverts, and the
     /// OrderRejected event carries the real reason string. This test is the
     /// contract-level twin of the rejected-transfer screenshot in Part F.8 —
@@ -67,6 +72,41 @@ contract SecondaryMarketTest is Test {
         (, , , , , , bool filled) = market.orders(orderId);
         assertTrue(filled);
         assertEq(token.balanceOf(verifiedTaker), QTY);
+    }
+
+    /// A bid's payout must go to the bidder (maker), never to whoever calls
+    /// fillOrder — the filler is the seller supplying the unit, not the buyer.
+    function test_FillOrder_Bid_PaysMaker() public {
+        bytes32 orderId = _placeBid(verifiedTaker);
+
+        vm.expectEmit(true, true, false, true);
+        emit SecondaryMarket.OrderFilled(orderId, unverifiedTaker);
+
+        // Anyone can supply the unit being sold — the compliance gate is on
+        // the recipient (the bidder), not the filler.
+        vm.prank(unverifiedTaker);
+        market.fillOrder(orderId);
+
+        (, , , , , , bool filled) = market.orders(orderId);
+        assertTrue(filled);
+        assertEq(token.balanceOf(verifiedTaker), QTY, "bid's maker must receive the unit, not the filler");
+    }
+
+    /// If the bid's own maker isn't a verified holder, the fill must revert
+    /// — the real ATS compliance gate is on whoever ends up holding the
+    /// security, which for a bid is the maker, not the filler.
+    function test_FillOrder_Bid_RevertsForUnverifiedMaker() public {
+        bytes32 orderId = _placeBid(unverifiedTaker);
+
+        vm.expectEmit(true, true, false, false);
+        emit SecondaryMarket.OrderRejected(orderId, verifiedTaker, "IDENTITY_NOT_VERIFIED");
+
+        vm.prank(verifiedTaker);
+        vm.expectRevert("transfer restricted: counterparty not compliant");
+        market.fillOrder(orderId);
+
+        (, , , , , , bool filled) = market.orders(orderId);
+        assertFalse(filled, "filled flag must be rolled back on revert");
     }
 
     function test_OnlyRecorder_CanAnchorEvents() public {

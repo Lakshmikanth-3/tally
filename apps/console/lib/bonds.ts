@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { ethers } from 'ethers';
 import { UnderwritingReasonCode } from '@tally/seam';
 import { classifyDecline, computeDiscountRate } from '@tally/underwriting';
 import {
@@ -64,11 +65,17 @@ function requireEnv(name: string): string {
 /// account is both the diamond owner and, for now, the only account that
 /// ever needs to redeem, so it self-issues its own KYC credential (see
 /// ats-client's kyc.ts) rather than needing a third-party KYC provider.
+///
+/// evmAddress is derived from the private key (same as
+/// lib/secondary-market.ts's getCustodianEvmAddress) rather than a separate
+/// required env var — a second value that must always agree with the key
+/// is one more way to misconfigure this than deriving it outright.
 export function getCustodian() {
+  const privateKeyHex = requireEnv('HEDERA_ECDSA_PRIVATE_KEY');
   return {
     accountId: requireEnv('HEDERA_ECDSA_ACCOUNT_ID'),
-    evmAddress: requireEnv('HEDERA_ECDSA_EVM_ADDRESS'),
-    privateKeyHex: requireEnv('HEDERA_ECDSA_PRIVATE_KEY'),
+    evmAddress: ethers.computeAddress(`0x${privateKeyHex.replace(/^0x/, '')}`),
+    privateKeyHex,
   };
 }
 
@@ -192,6 +199,17 @@ export function getLatestBond(issuerId: string): BondRecord | null {
   const row = getDb().prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC LIMIT 1').get(issuerId) as
     | BondRow
     | undefined;
+  return row ? rowToBondRecord(row) : null;
+}
+
+/// Finds the real issued bond behind a given ATS diamond address — used by
+/// the secondary-market fill route to go from a bid order's on-chain
+/// bondToken address back to the Hedera-format bondTokenId depositBondForResale
+/// needs, since the on-chain Order struct only ever carries the EVM address.
+export function findBondByEvmDiamondAddress(evmDiamondAddress: string): BondRecord | null {
+  const row = getDb()
+    .prepare("SELECT * FROM bonds WHERE evm_diamond_address = ? AND status = 'issued' ORDER BY created_at DESC LIMIT 1")
+    .get(evmDiamondAddress) as BondRow | undefined;
   return row ? rowToBondRecord(row) : null;
 }
 
@@ -379,7 +397,7 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
   });
 }
 
-const SECONDARY_MARKET_EVM_ADDRESS = '0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1'; // same deployed contract as lib/secondary-market.ts
+const SECONDARY_MARKET_EVM_ADDRESS = '0x4C8Ae85686229f6b8CA55B79a7261842ADD46C5f'; // same deployed contract as lib/secondary-market.ts
 
 /// Moves the custodian's real held bond unit into the SecondaryMarket
 /// contract's own balance — the real escrow step a listed order needs

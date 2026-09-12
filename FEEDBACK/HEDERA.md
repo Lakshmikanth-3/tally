@@ -41,7 +41,7 @@ hit building against it — not speculative.
    factoryInstance[deployMethod] is not a function`. The real working path
    (`Bond.create` + a separate `FixedRate.setRate` call) exists in the SDK
    but isn't documented as the fix for this.
-2. **Access-control requirements for follow-up calls aren't documented.**
+3. **Access-control requirements for follow-up calls aren't documented.**
    After `Bond.create`, the diamond owner does *not* automatically hold the
    roles needed to set a coupon rate (`_INTEREST_RATE_MANAGER_ROLE`), add an
    account to the control list (`_CONTROLLIST_ROLE`), or redeem at maturity
@@ -49,18 +49,18 @@ hit building against it — not speculative.
    `Role.grantRole`, and we only found out which role was missing by decoding
    the revert selector against the contracts package's own ABI JSON files
    one at a time.
-3. **ISIN validation is inconsistent between the SDK and the contract.** The
+4. **ISIN validation is inconsistent between the SDK and the contract.** The
    SDK's client-side `Security.checkISIN` only checks length/format; the
    deployed Factory contract separately validates the real ISO 6166 Luhn
    checksum and reverts with `WrongISINChecksum` if it doesn't match. A
    correctly-formatted, SDK-accepted ISIN can still fail on-chain.
-4. **Type declarations don't always match runtime values.** `Bond.create`'s
+5. **Type declarations don't always match runtime values.** `Bond.create`'s
    response is typed as `SecurityViewModel` with `diamondAddress: string`,
    but the real runtime value is a `HederaId`-shaped object
    (`{ value: string }`). Harmless if you only pass it back into other SDK
    calls (which happen to tolerate either shape), but it breaks any caller
    that actually trusts the declared type.
-5. **KYC only has one real grant path, and it's heavier than it needs to be
+6. **KYC only has one real grant path, and it's heavier than it needs to be
    for a simple internal-KYC use case.** With `internalKycActivated: true`,
    we expected a lightweight "mark this account KYC'd" call. Instead,
    `Kyc.grantKyc` requires a real verifiable credential, verified via
@@ -72,6 +72,23 @@ hit building against it — not speculative.
    (no regulation) also has no valid subtype combination in the SDK's own
    validation logic — every subtype fails for that type, which reads as a
    real gap for anyone issuing a plain non-regulated testnet/demo bond.
+7. **Hashio's JSON-RPC relay rejects batched requests, and Foundry's `forge
+   script` genuinely can't get past that.** `forge script script/Deploy.s.sol
+   --rpc-url hedera_testnet --broadcast` fails outright against
+   `https://testnet.hashio.io/api` with `Invalid parameter 1: ... Expected 0x
+   prefixed hexadecimal block number` — no user code ever runs, so `-vvvv`
+   shows nothing. Individually, every RPC method it needs
+   (`eth_chainId`, `eth_getBlockByNumber`, `eth_feeHistory`, ...) works fine
+   against Hashio; the failure only appears once `forge script`'s pre-flight
+   bundles several of them into one batched JSON-RPC array in a single HTTP
+   POST, which is the exact same "not permitted as part of batch requests"
+   behavior this project already had to route around for `eth_getLogs` in
+   `lib/secondary-market.ts` (via ethers' `batchMaxCount: 1`) — Foundry has no
+   equivalent flag. **Real, verified workaround:** deploy with `forge create
+   <path>:<Contract> --rpc-url ... --private-key ... --constructor-args ...`
+   instead of `forge script` — it doesn't batch, and both `SettlementAnchor`
+   and `SecondaryMarket` deployed successfully to Hedera testnet this way
+   (`0.0.10501789` / `0.0.10501801`).
 
 ## What we'd want improved
 

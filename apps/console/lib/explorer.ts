@@ -48,15 +48,15 @@ export const PROOF_ENTRIES: ProofEntry[] = [
   {
     group: 'Hedera testnet',
     label: 'SettlementAnchor',
-    value: '0.0.10410671',
-    href: hashscanContract('0.0.10410671'),
+    value: '0.0.10501789',
+    href: hashscanContract('0.0.10501789'),
     note: 'Emits one standardized lifecycle event per bond, whoever the issuer is.',
   },
   {
     group: 'Hedera testnet',
     label: 'SecondaryMarket',
-    value: '0.0.10410672',
-    href: hashscanContract('0.0.10410672'),
+    value: '0.0.10501801',
+    href: hashscanContract('0.0.10501801'),
     note: 'Resale venue — compliance is enforced by the ATS token itself reverting.',
   },
   {
@@ -76,15 +76,15 @@ export const PROOF_ENTRIES: ProofEntry[] = [
   {
     group: 'Ethereum Sepolia',
     label: 'SettlementAnchor (indexed copy)',
-    value: '0x7FF282B4BEc3b2fE58981441317B5892E23361C2',
-    href: etherscanAddress('0x7FF282B4BEc3b2fE58981441317B5892E23361C2'),
-    note: 'Same deterministic address as the Hedera deployment — Subgraph Studio cannot index Hedera.',
+    value: '0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4',
+    href: etherscanAddress('0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4'),
+    note: 'Deployed from the same custodian account as the Hedera copy — Subgraph Studio cannot index Hedera.',
   },
   {
     group: 'Ethereum Sepolia',
     label: 'SecondaryMarket (indexed copy)',
-    value: '0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1',
-    href: etherscanAddress('0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1'),
+    value: '0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4',
+    href: etherscanAddress('0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4'),
     note: 'The mirrored deployment the subgraph reads from.',
   },
   {

@@ -6,8 +6,8 @@ import secondaryMarketAbi from './abi/SecondaryMarket.json';
 /// browser needed, unlike packages/ats-client's ATS calls.
 const RPC_URL = 'https://testnet.hashio.io/api';
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
-const SECONDARY_MARKET_HEDERA_ID = '0.0.10410672';
-const SECONDARY_MARKET_ADDRESS = '0xa626c9F7B0FfB8cE22162b50033C602d6fb388c1'; // real Hedera testnet deployment, confirmed via mirror node
+const SECONDARY_MARKET_HEDERA_ID = '0.0.10501801';
+const SECONDARY_MARKET_ADDRESS = '0x4C8Ae85686229f6b8CA55B79a7261842ADD46C5f'; // real Hedera testnet deployment, confirmed via mirror node
 
 function getProvider(): ethers.JsonRpcProvider {
   // [VERIFIED via a real live call] Hashio's JSON-RPC relay rejects
@@ -149,6 +149,33 @@ export async function listMarketOrders(): Promise<MarketOrder[]> {
   }
 
   return orders.sort((a, b) => b.placedBlockTimestamp - a.placedBlockTimestamp);
+}
+
+export interface OnChainOrder {
+  maker: string;
+  bondId: string;
+  bondToken: string;
+  priceUSD: string;
+  quantity: string;
+  isBid: boolean;
+  filled: boolean;
+}
+
+/// Reads a single real order directly from the contract's own storage — no
+/// need to replay every log just to look up one order's current state (see
+/// fillOrder's route, which needs this before deciding how to fill a bid).
+export async function getOrder(orderId: string): Promise<OnChainOrder> {
+  const contract = getContract(getProvider());
+  const o = await contract.orders(orderId);
+  return {
+    maker: o.maker,
+    bondId: o.bondId,
+    bondToken: o.bondToken,
+    priceUSD: o.priceUSD.toString(),
+    quantity: o.quantity.toString(),
+    isBid: o.isBid,
+    filled: o.filled,
+  };
 }
 
 export interface PlaceOrderParams {

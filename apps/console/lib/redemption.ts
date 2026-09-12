@@ -6,7 +6,7 @@ import { buildHederaClient, anchorNow, EventKind, isSettlementOnTime } from '@ta
 import { getLatestBond, getCustodian, markBondRedeemed } from './bonds';
 import { computeBondId } from './secondary-market';
 
-const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10410671'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
+const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10501789'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
 
 interface TallyWindowBridge {

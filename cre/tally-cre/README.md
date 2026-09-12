@@ -1,6 +1,8 @@
-# Hello Confidential Workflows — CRE Starter Template (TypeScript)
+# Tally Underwriting — Chainlink Confidential Workflow
 
-Quickstart confidential workflow. Run a handler's callback inside a secure enclave: fetch a secret from the Vault DON, call an API from inside the enclave, execute decision logic over the confidential data such as Vault DON secrets or HTTP response payloads, then cross back to the Workflow DON for consensus and DON capability calls. 
+Tally's real confidential underwriting workflow (`underwriting/`), built on Chainlink CRE's Confidential Workflows. It runs a handler's callback inside a secure enclave: fetches a business's real revenue snapshot from Tally's own console API (`apps/console`), applies Tally's real underwriting policy over that confidential data inside the enclave, then crosses back to the Workflow DON with only the verdict — never the raw revenue figures.
+
+This started from Chainlink's "Hello Confidential Workflows" starter template; the sections below describe the real, customized workflow as it exists in this repository, not the generic template.
 
 **⚠️ DISCLAIMER**
 
@@ -44,20 +46,22 @@ A **Confidential Workflow** moves that computation into a hardware-isolated [enc
 ║  Data below is kept confidential from node operators.        ║
 ║  The binary — including this logic — is NOT confidential.    ║
 ║                                                              ║
-║   Step 2: runtime.getSecret({ id: 'API_TOKEN' })             ║
+║   getSecret({ id: 'REVENUE_API_TOKEN' })                     ║
 ║             ▲                                                ║
 ║             └── released by Vault DON, decrypted in-enclave  ║
 ║                                                              ║
-║   Step 3: HTTPClient.sendRequest(runtime, { ... })           ║
+║   HTTPClient.sendRequest(runtime, {                          ║
+║     url: '<consoleBaseUrl>/api/business/<issuerId>/revenue'  ║
+║   })                                                          ║
 ║             Authorization: Bearer <secret>                   ║
 ║             ▲ request + response payloads stay confidential  ║
 ║                                                              ║
-║   Logic over confidential data:                              ║
-║             score(response) vs. scoreThreshold               ║
-║             -> verdict = APPROVE | REJECT                    ║
+║   Tally's real underwriting policy over confidential data:   ║
+║     classifyDecline(revenue) -> reasonCode                   ║
+║     computeDiscountRate(revenue) -> coupon bps               ║
 ╚═══════════════════════════╤══════════════════════════════════╝
-                            │  Step 4: runtime.usingTheDons()
-                            │  ONLY the verdict + score cross out
+                            │  runtime.usingTheDons()
+                            │  ONLY issuerId + verdict + bps + reasonCode cross out
                             v
 ┌──────────────────────────────────────────────────────────────┐
 │  WORKFLOW DON — donRuntime.report({ ... })                   │
@@ -68,15 +72,14 @@ A **Confidential Workflow** moves that computation into a hardware-isolated [enc
 
 ## What the workflow does
 
-`my-workflow/workflow.ts`:
+`underwriting/workflow.ts` (entry point wired up by `underwriting/main.ts`):
 
 1. **Registers the cron handler with `cre.handlerInTee`**, constrained to `[{ tee: 'nitro', regions: ['us-west-2'] }]`
-2. **Fetches `API_TOKEN`** with `runtime.getSecret()` — the Vault DON releases it only into an attested enclave, and it's decrypted at the moment the call runs
-3. **Calls the configured URL** with `HTTPClient.sendRequest(runtime, ...)`, passing the `TeeRuntime` so the request executes from inside the enclave with the secret in the `Authorization` header
-4. **Scores the response** against `scoreThreshold` — decision logic executed over confidential data. The data it reads (the secret and the response payload) stays confidential from node operators; the logic itself is part of the binary and is not
-5. **Crosses back with `usingTheDons()`** and generates a signed report containing only the verdict and score — never the secret or the raw response
-
-The default endpoint is `https://postman-echo.com/headers`, which echoes the request headers back — no signup or real API key needed. The workflow uses that to confirm the secret really was injected inside the enclave, reporting it as the boolean `secret reached API: true` rather than by logging the token. Note that it never logs the response body either; the confidentiality boundary is the reason, and it's worth keeping that habit even in simulation.
+2. **Fetches the `REVENUE_API_TOKEN` secret** with `runtime.getSecret({ id: config.secretId })` — the Vault DON releases it only into an attested enclave, and it's decrypted at the moment the call runs
+3. **Calls Tally's own console API** — `GET {consoleBaseUrl}/api/business/{issuerId}/revenue` — with `HTTPClient.sendRequest(runtime, ...)`, passing the `TeeRuntime` so the request executes from inside the enclave with the secret in the `Authorization` header. This is a real trailing-90-day revenue snapshot (`trailing90dTotalUSD`, `volatilityScore`, `historyDays`) computed by `apps/console` from a business's actual registered/submitted transactions — never a fixture.
+4. **Applies Tally's real underwriting policy** (`underwriting/pricing.ts`, a byte-for-byte mirror of `packages/underwriting/src/pricing.ts` — duplicated because this bun/WASM toolchain sits outside the pnpm workspace graph, so a `file:` dependency across that boundary doesn't resolve): `classifyDecline` checks history length, revenue threshold, and volatility ceiling; `computeDiscountRate` derives the coupon rate in basis points. This is the logic that stays confidential from node operators, applied over the confidential revenue figures fetched above.
+5. **Logs only the verdict** — `runtime.log(...)` records `approved`, `recommendedCouponBps`, and `reasonCode`, never the raw revenue total or volatility score
+6. **Crosses back with `usingTheDons()`** and generates a signed report ABI-encoding `(issuerId, approved, recommendedCouponBps, reasonCode)` — never the underlying revenue figures
 
 ## Getting Started
 
@@ -89,7 +92,7 @@ The default endpoint is `https://postman-echo.com/headers`, which echoes the req
 ### 1. Install Dependencies
 
 ```bash
-cd my-workflow && bun install && cd ..
+cd underwriting && bun install && cd ..
 ```
 
 ### 2. Configure Secrets
@@ -98,32 +101,32 @@ cd my-workflow && bun install && cd ..
 cp .env.example .env
 ```
 
-Then set `SECRET_API_TOKEN` in `.env`. `secrets.yaml` maps the workflow-facing secret ID `API_TOKEN` to that environment variable:
+Then set `CRE_REVENUE_API_TOKEN` in `.env` to the same value as the console app's own `REVENUE_API_TOKEN` (see `../../.env.example`) — the console checks the bearer token presented against that value. `secrets.yaml` maps the workflow-facing secret ID `REVENUE_API_TOKEN` to that environment variable:
 
 ```yaml
 secretsNames:
-    API_TOKEN:
-        - SECRET_API_TOKEN
+    REVENUE_API_TOKEN:
+        - CRE_REVENUE_API_TOKEN
 ```
 
-With the default echo endpoint any non-empty value works.
+You'll also need the real console app (`apps/console`) running and reachable at the `consoleBaseUrl` set in `underwriting/config.staging.json` (default `http://localhost:3000`), with a real registered business at the `issuerId` configured there.
 
 ### 3. Run Tests
 
 ```bash
-cd my-workflow && bun test
+cd underwriting && bun test
 ```
 
 ### 4. Simulate
 
 ```bash
-cre workflow simulate my-workflow --target staging-settings --non-interactive --trigger-index 0
+cre workflow simulate underwriting --target staging-settings --non-interactive --trigger-index 0
 ```
 
-Expected output:
+Real, most-recently-observed output for Corrado's Deli (the one disclosed synthetic-data demo business — see the top-level README's "Demo data disclosure"):
 
 ```
-2026-01-01T00:00:00Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+2026-09-10T00:00:00Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
 ╭────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Trigger requested TEE Execution your trigger will run in one of the following Tees:                │
 │     - AWS Nitro in us-west-2                                                                       │
@@ -133,28 +136,31 @@ Expected output:
 │ They are presented in the simulator for debugging only.                                            │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-2026-01-01T00:00:00Z [USER LOG] Enclave computation complete. verdict=REJECT
+2026-09-10T00:00:00Z [USER LOG] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=428 reason=0
 
 ✓ Workflow Simulation Result:
-"REJECT (score: 371, secret reached API: true)"
+"APPROVED (bps=428, reason=0)"
 ```
 
-Three things to notice:
+A freshly-registered business with no revenue history produces a genuine decline instead — `reason=2` (`INSUFFICIENT_HISTORY`) — since `classifyDecline` checks `historyDays < 30` before it ever looks at revenue or volatility. Neither outcome is scripted; both come straight from the real console API response for whatever `issuerId` is configured.
+
+Two things to notice:
 
 - The simulator confirms the TEE constraint it resolved (`AWS Nitro in us-west-2`) and warns that **it is not a real enclave** — logs are shown for debugging only. In real execution those logs never leave the TEE.
-- `secret reached API: true` means the Vault DON secret was fetched inside the enclave and arrived in the outbound request's `Authorization` header.
-- The verdict flips between `APPROVE` and `REJECT` from run to run. That's expected: the score is derived from the live response body, and the echo endpoint includes a per-request trace ID. Lower `scoreThreshold` to see `APPROVE` consistently.
+- Only the verdict log line (`approved`, `bps`, `reason`) is ever printed — never `trailing90dTotalUSD` or `volatilityScore`, which stay confidential inside the enclave per `workflow.ts`'s own logging discipline.
 
 ## Configuration
 
-`my-workflow/config.staging.json`:
+`underwriting/config.staging.json` / `underwriting/config.production.json`:
 
 | Field | Description |
 |-------|-------------|
 | `schedule` | Cron expression (6 fields, seconds first) |
-| `url` | Endpoint called from inside the enclave |
-| `secretId` | Secret ID fetched with `runtime.getSecret()`; must match `secrets.yaml` |
-| `scoreThreshold` | Threshold the in-enclave scoring compares against |
+| `consoleBaseUrl` | Base URL of the running console app (`apps/console`) whose revenue API this workflow calls |
+| `issuerId` | Which registered business to underwrite |
+| `secretId` | Secret ID fetched with `runtime.getSecret()`; must match `secrets.yaml` (`"REVENUE_API_TOKEN"`) |
+
+Staging polls every minute against `http://localhost:3000`; production polls every 5 minutes and expects `consoleBaseUrl` replaced with the deployed console's real URL.
 
 ## TEE constraints
 
@@ -187,10 +193,13 @@ Consequences worth internalizing:
 - **Keep enclave logic deterministic.** The Workflow DON verifies enclave attestations and reaches consensus before the workflow completes successfully.
 - **Multiple confidential workflows may execute within the same enclave.** Workflows are isolated from one another by the wasmtime. Dedicated per workflow enclave isolation is planned as a future enhancement.
 
-## Customization
+## Status and possible extensions
 
-- **Put your real logic in the enclave**: replace `scoreResponse` in `workflow.ts` with the decision logic you need to run over confidential data. Remember that the logic itself is revealed as part of the binary — what the enclave preserves is the confidentiality of the secrets and payloads it reads
-- **Deliver the report on-chain**: pass the report from Step 4 to `evmClient.writeReport(donRuntime, report)` — the RPCs in `project.yaml` are already set up for Sepolia. See the [Keeper Bot](../../keeper-bot) or [Event Reactor](../../event-reactor) templates for the full write path
+The underwriting logic itself is complete and simulation-verified (see the top-level `docs/PROJECT_REPORT.md`); only the live TEE deploy is outstanding, pending Chainlink's Confidential Workflows private-beta access review (`FEEDBACK/CHAINLINK.md`). Today the verdict crosses to the Workflow DON via `donRuntime.report(...)` and stops there — nothing in this workflow writes it on-chain or calls back into the console; `apps/console/lib/bonds.ts`'s own `issueBondForBusiness` applies the same underwriting policy (`packages/underwriting`) directly rather than waiting on this workflow's output, so the demo issuance flow doesn't depend on live CRE deployment.
+
+If extending this further:
+
+- **Deliver the report on-chain**: `project.yaml`'s RPCs are already configured for Sepolia, so a future version could pass the report to `evmClient.writeReport(donRuntime, report)` and have the console (or a subgraph) read the verdict from there instead of computing it locally
 - **Change the trigger**: `handlerInTee` accepts any CRE trigger, same as `handler` — swap cron for a log trigger to react to on-chain events confidentially
 - **Fetch more secrets**: call `runtime.getSecret()` once per secret; the TypeScript `SecretsProvider` has no batch variant
 

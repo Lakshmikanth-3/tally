@@ -48,11 +48,19 @@ contract SecondaryMarket {
     }
 
     /// @notice Fills an order. The ATS bond token's transfer function is the
-    /// actual compliance gate — if the taker is not a verified holder, the
-    /// low-level call below reverts, and that revert IS the compliance-
+    /// actual compliance gate — if the recipient is not a verified holder,
+    /// the low-level call below reverts, and that revert IS the compliance-
     /// rejection demo moment. This function deliberately does not
-    /// pre-validate the taker itself, so the demo is proving the real
+    /// pre-validate the recipient itself, so the demo is proving the real
     /// ATS enforcement path, not a UI-side check that could be faked.
+    ///
+    /// For an ask, the taker (msg.sender) is the new holder, paid out of the
+    /// maker's own escrowed balance (see placeOrder's companion deposit step
+    /// in the off-chain backend). For a bid, the *maker* — the original
+    /// bidder — is the new holder: the taker is the one supplying/escrowing
+    /// the unit being sold, so the payout must go to the bid's maker, never
+    /// to whoever happens to call fillOrder. Getting this backwards would
+    /// let a bid's filler pay out to themselves instead of the real buyer.
     ///
     /// @dev Does not call `anchor` directly: SettlementAnchor's recorder
     /// gate authorizes only the off-chain backend, which anchors the Resale
@@ -63,8 +71,10 @@ contract SecondaryMarket {
         require(!o.filled, "already filled");
         o.filled = true;
 
+        address recipient = o.isBid ? o.maker : msg.sender;
+
         (bool success, bytes memory data) = o.bondToken.call(
-            abi.encodeWithSignature("transfer(address,uint256)", msg.sender, o.quantity)
+            abi.encodeWithSignature("transfer(address,uint256)", recipient, o.quantity)
         );
         if (!success) {
             o.filled = false; // revert the fill state

@@ -11,7 +11,7 @@ import {
 
 describe('explorer links', () => {
   it('builds real HashScan testnet URLs per entity type', () => {
-    expect(hashscanContract('0.0.10410671')).toBe('https://hashscan.io/testnet/contract/0.0.10410671');
+    expect(hashscanContract('0.0.10501789')).toBe('https://hashscan.io/testnet/contract/0.0.10501789');
     // Bond tokens are ATS diamond contracts, not native HTS tokens — /contract/ is the real, working HashScan page.
     expect(hashscanToken('0.0.10425775')).toBe('https://hashscan.io/testnet/contract/0.0.10425775');
     expect(hashscanAccount('0.0.8050897')).toBe('https://hashscan.io/testnet/account/0.0.8050897');
@@ -19,8 +19,8 @@ describe('explorer links', () => {
   });
 
   it('builds a real Sepolia Etherscan URL', () => {
-    expect(etherscanAddress('0x7FF282B4BEc3b2fE58981441317B5892E23361C2')).toBe(
-      'https://sepolia.etherscan.io/address/0x7FF282B4BEc3b2fE58981441317B5892E23361C2',
+    expect(etherscanAddress('0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4')).toBe(
+      'https://sepolia.etherscan.io/address/0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4',
     );
   });
 
@@ -54,9 +54,11 @@ describe('proof entries', () => {
     }
   });
 
-  it('keeps the dual deployment addresses identical across networks', () => {
-    // The Sepolia copies exist only so The Graph can index them; they are
-    // deployed at the same deterministic CREATE addresses as Hedera's.
+  it('lists a real EVM address for each Sepolia copy', () => {
+    // The Sepolia copies exist only so The Graph can index them (Hedera
+    // isn't Studio-indexable) — deployed from the same custodian account as
+    // the Hedera originals, but not necessarily at the same CREATE address,
+    // since that depends on the account's nonce at deploy time on each chain.
     const sepolia = PROOF_ENTRIES.filter((e) => e.group === 'Ethereum Sepolia');
     expect(sepolia).toHaveLength(2);
     for (const entry of sepolia) {

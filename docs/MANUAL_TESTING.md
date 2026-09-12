@@ -36,7 +36,7 @@ This is the page to show a judge who doesn't trust the UI.
 - Every row is a clickable link out to a public explorer.
 - Any bonds this instance has issued appear at the top with their real token id and transaction.
 
-**Verify independently:** click *SettlementAnchor* under Hedera testnet. HashScan should load contract `0.0.10410671` and show real transactions against it. Do the same for the Sepolia rows on Etherscan.
+**Verify independently:** click *SettlementAnchor* under Hedera testnet. HashScan should load contract `0.0.10501789` and show real transactions against it. Do the same for the Sepolia rows on Etherscan.
 
 **Why two networks:** the Hedera deployment is the real product; the Sepolia copy exists only because Subgraph Studio can't index Hedera. Same deterministic addresses, deliberately.
 
