@@ -8,6 +8,14 @@ staging-settings:
   rpcs:
     - chain-name: ethereum-testnet-sepolia
       url: https://ethereum-sepolia-rpc.publicnode.com
+    # [VERIFIED via a real failed deploy] `cre workflow deploy` refuses to
+    # start without an ethereum-mainnet RPC even when targeting staging —
+    # "missing RPC URL for ethereum-mainnet - required to deploy CRE
+    # workflows" — because CRE's own Workflow Registry contract lives on
+    # mainnet regardless of which chains the workflow itself touches. Same
+    # public endpoint already used under production-settings below.
+    - chain-name: ethereum-mainnet
+      url: https://ethereum-rpc.publicnode.com
 
 # ==========================================================================
 production-settings:

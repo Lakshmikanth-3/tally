@@ -193,9 +193,61 @@ Consequences worth internalizing:
 - **Keep enclave logic deterministic.** The Workflow DON verifies enclave attestations and reaches consensus before the workflow completes successfully.
 - **Multiple confidential workflows may execute within the same enclave.** Workflows are isolated from one another by the wasmtime. Dedicated per workflow enclave isolation is planned as a future enhancement.
 
+## Deploying live
+
+Deploy access was granted (`cre whoami` reports `Deploy Access: Enabled`), and this
+workflow has been deployed and observed executing on Chainlink's real DON. Four real
+requirements surfaced doing it, none of them obvious from the docs:
+
+1. **An `ethereum-mainnet` RPC is required in `project.yaml` even to deploy to
+   staging** — `cre workflow deploy` refuses to start without one
+   (`missing RPC URL for ethereum-mainnet - required to deploy CRE workflows`),
+   because CRE's own Workflow Registry contract lives on mainnet regardless of
+   which chains the workflow itself touches.
+2. **Pick a registry deliberately.** `cre registry list` shows two:
+   `onchain:ethereum-mainnet` (the registry contract at
+   `0x4Ac54353FA4Fa961AfcC5ec4B118596d3305E7e5`, which charges **real mainnet gas**
+   to register) and `private` (Chainlink-hosted, off-chain, free). This is a
+   testnet-only project, so `workflow.yaml` sets `deployment-registry: "private"`.
+3. **Secrets are a separate step from deploy.** `cre workflow deploy` uploads only
+   the binary and config; until `cre secrets create secrets.yaml --secrets-auth
+   browser` is run, every execution fails with
+   `secret retrieval failed for REVENUE_API_TOKEN`. Use `--secrets-auth browser`
+   for the private registry (`onchain` is for the on-chain registry).
+4. **`consoleBaseUrl` must be publicly reachable.** `config.staging.json` ships
+   pointing at `http://localhost:3000`, which is correct for `cre workflow simulate`
+   (the simulator runs locally) but fails on a real deploy with
+   `Revenue fetch failed with status: 400` — Chainlink's DON nodes cannot reach
+   your machine. For a live deploy, point it at a hosted console URL or a tunnel
+   (e.g. `ngrok http 3000`) and redeploy. Verified working: DON nodes hit the
+   tunnelled revenue endpoint with `User-Agent: Go-http-client/1.1` and got `200`
+   with real revenue data, after which the execution reported `SUCCESS`.
+
+### Known limitation: the TEE enclave does not currently run
+
+Even on a `SUCCESS` execution, the `confidential-workflows` capability itself fails:
+
+```
+confidential-workflows capability execution failed: [13]Internal: ...
+cannot validate enclave config: DON members not set
+```
+
+The trigger, the HTTP call, consensus, and the signed report all genuinely succeed —
+but the `handlerInTee` body is **not** executing inside a real attested enclave, so
+the confidentiality guarantee that is the entire point of Confidential Workflows is
+not actually in force on this deployment. `DON members not set` is Chainlink-side
+provisioning for the `private` registry's `zone-a` DON family, not something fixable
+in this repository, and it is not covered in the current docs. Do not describe this
+deployment as confidential until that error clears.
+
 ## Status and possible extensions
 
-The underwriting logic itself is complete and simulation-verified (see the top-level `docs/PROJECT_REPORT.md`); only the live TEE deploy is outstanding, pending Chainlink's Confidential Workflows private-beta access review (`FEEDBACK/CHAINLINK.md`). Today the verdict crosses to the Workflow DON via `donRuntime.report(...)` and stops there — nothing in this workflow writes it on-chain or calls back into the console; `apps/console/lib/bonds.ts`'s own `issueBondForBusiness` applies the same underwriting policy (`packages/underwriting`) directly rather than waiting on this workflow's output, so the demo issuance flow doesn't depend on live CRE deployment.
+The underwriting logic is complete, simulation-verified, and deployed live (see
+above). Today the verdict crosses to the Workflow DON via `donRuntime.report(...)`
+and stops there — nothing in this workflow writes it on-chain or calls back into the
+console; `apps/console/lib/bonds.ts`'s own `issueBondForBusiness` applies the same
+underwriting policy (`packages/underwriting`) directly rather than waiting on this
+workflow's output, so the demo issuance flow doesn't depend on live CRE deployment.
 
 If extending this further:
 

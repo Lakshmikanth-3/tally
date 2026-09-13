@@ -1,1 +1,5 @@
 *.env
+
+# Compiled workflow binary, emitted by `cre workflow deploy` (and uploaded to
+# Chainlink's artifact storage) — a build output, regenerated on every deploy.
+binary.wasm.br.b64

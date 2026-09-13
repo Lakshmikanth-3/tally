@@ -4,6 +4,15 @@
 staging-settings:
   user-workflow:
     workflow-name: "tally-underwriting-staging"
+    # [VERIFIED via `cre registry list`] Two real registries are available to
+    # this org: "onchain:ethereum-mainnet" (the Workflow Registry contract at
+    # 0x4Ac54353FA4Fa961AfcC5ec4B118596d3305E7e5, which charges real mainnet
+    # gas to register) and "private" (Chainlink-hosted, off-chain). Staging
+    # deliberately targets the off-chain one — this is a testnet-only project
+    # and registering it would otherwise cost real ETH on mainnet for a demo
+    # workflow. Not a stand-in for the on-chain registry: it's a real, first-
+    # class deployment target the CLI itself offers.
+    deployment-registry: "private"
   workflow-artifacts:
     workflow-path: "./main.ts"
     config-path: "./config.staging.json"

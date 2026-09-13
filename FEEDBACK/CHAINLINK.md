@@ -41,7 +41,45 @@ in the abstract.
    the request is submitted — just "we'll review it and get back to you."
    For a hackathon submission deadline, even a rough estimate would help
    teams plan whether to build a deploy-dependent demo or fall back to
-   simulation-based rehearsal.
+   simulation-based rehearsal. (Access was ultimately granted, and the
+   workflow now deploys and executes live — the points below are all from
+   that real deploy.)
+4. **Deploying to staging demands an `ethereum-mainnet` RPC.** `cre workflow
+   deploy --target staging-settings` fails outright with `missing RPC URL for
+   ethereum-mainnet - required to deploy CRE workflows`, even for a workflow
+   that touches no chain at all. The reason (CRE's Workflow Registry contract
+   lives on mainnet) is reasonable, but the error arrives with no explanation
+   and reads like a misconfigured target.
+5. **`cre registry list` is the only place the registry choice is visible, and
+   nothing warns that the default is the paid one.** Registering on
+   `onchain:ethereum-mainnet` spends real mainnet gas; `private` is free and
+   off-chain. A testnet/hackathon project almost certainly wants `private`, but
+   you only discover the choice exists by running `registry list` — a one-line
+   note in the deploy quickstart would save people from an accidental mainnet
+   spend.
+6. **Secrets aren't part of deploy, and the resulting failure doesn't say so.**
+   `cre workflow deploy` uploads binary and config but not secrets, so the
+   first executions fail with `relay quorum unreachable: 0 signed responses`
+   buried inside a secret-retrieval error — which reads like a DON outage
+   rather than "you haven't run `cre secrets create` yet."
+7. **`--secrets-auth` defaults to `onchain`, which silently mismatches a
+   `private`-registry deployment.** The correct pairing (`private` registry →
+   `--secrets-auth browser`) isn't inferred from the workflow's own
+   `deployment-registry`, and nothing warns when they disagree.
+8. **`cre workflow list` silently omits private-registry workflows.** Right
+   after a successful deploy, plain `cre workflow list` printed
+   `No workflows found`; only `--registry private` showed the ACTIVE workflow.
+   That gap is alarming when you've just deployed something.
+9. **Confidential execution can fail while the overall execution reports
+   SUCCESS.** Our live executions report `Status: SUCCESS` with a top-level
+   `confidential-workflows capability execution failed: ... cannot validate
+   enclave config: DON members not set`. The trigger, HTTP call, consensus and
+   report all succeed, so the run looks healthy — but the `handlerInTee` body
+   never ran in an attested enclave, meaning the confidentiality guarantee is
+   silently absent. For a product whose entire value is confidentiality, this
+   should be a hard failure, not a footnote on a green run. `DON members not
+   set` is also undocumented, with no indication whether it's a provisioning
+   delay, a private-registry limitation, or a misconfiguration on our side.
 
 ## What we'd want improved
 
