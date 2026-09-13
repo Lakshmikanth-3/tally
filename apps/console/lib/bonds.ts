@@ -11,7 +11,6 @@ import {
   type IssueBondParams,
   type IssuedBond,
 } from '@tally/ats-client';
-import { startBrowserSignerSession } from '@tally/ats-client/browser-runner/runner';
 import { db } from './db';
 import { getBusiness, getRevenueSnapshot } from './business';
 
@@ -357,6 +356,11 @@ export async function issueBondForBusiness(issuerId: string, options: IssueBondO
   };
 
   let issued: IssuedBond;
+  // The headless-browser signer (and playwright behind it) is imported lazily,
+  // at the moment a signing action actually runs. A top-level import would load
+  // playwright for every page that merely reads bond data — including on the
+  // hosted deployment, which doesn't ship playwright and would crash on it.
+  const { startBrowserSignerSession } = await import('@tally/ats-client/browser-runner/runner');
   const session = await startBrowserSignerSession({
     privateKeyHex: custodian.privateKeyHex,
     rpcUrl: ATS_TESTNET.rpcNodeUrl,
@@ -443,6 +447,7 @@ const SECONDARY_MARKET_EVM_ADDRESS = '0x4C8Ae85686229f6b8CA55B79a7261842ADD46C5f
 export async function depositBondForResale(bondTokenId: string): Promise<DepositToMarketResult> {
   const custodian = getCustodian();
 
+  const { startBrowserSignerSession } = await import('@tally/ats-client/browser-runner/runner');
   const session = await startBrowserSignerSession({
     privateKeyHex: custodian.privateKeyHex,
     rpcUrl: ATS_TESTNET.rpcNodeUrl,

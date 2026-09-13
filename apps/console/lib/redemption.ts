@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { ethers } from 'ethers';
 import { ATS_TESTNET, type RedeemBondParams } from '@tally/ats-client';
-import { startBrowserSignerSession } from '@tally/ats-client/browser-runner/runner';
 import { buildHederaClient, anchorNow, EventKind, isSettlementOnTime } from '@tally/scheduler';
 import { getLatestIssuedBond, getCustodian, markBondRedeemed } from './bonds';
 import { computeBondId } from './secondary-market';
@@ -66,6 +65,11 @@ async function redeemBondForBusinessUnlocked(issuerId: string): Promise<RedeemBo
 
   const custodian = getCustodian();
 
+  // The headless-browser signer (and playwright behind it) is imported lazily,
+  // at the moment a signing action actually runs. A top-level import would load
+  // playwright for every page that merely reads bond data — including on the
+  // hosted deployment, which doesn't ship playwright and would crash on it.
+  const { startBrowserSignerSession } = await import('@tally/ats-client/browser-runner/runner');
   const session = await startBrowserSignerSession({
     privateKeyHex: custodian.privateKeyHex,
     rpcUrl: ATS_TESTNET.rpcNodeUrl,
