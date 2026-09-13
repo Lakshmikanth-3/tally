@@ -7,10 +7,10 @@ import { getLatestBond } from '@/lib/bonds';
 /// state without re-triggering a real issuance.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
-  return NextResponse.json({ bond: getLatestBond(issuerId) });
+  return NextResponse.json({ bond: await getLatestBond(issuerId) });
 }

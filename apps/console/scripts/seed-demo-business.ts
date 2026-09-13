@@ -6,7 +6,7 @@
 // disclosure" section — every place this business's revenue is shown in
 // the product surfaces the same disclosure.
 import { parseUsdToMicros } from '@tally/seam';
-import { getDb } from '../lib/db';
+import { db } from '../lib/db';
 import { markBusinessAsDemo, seedDemoTransactions } from '../lib/business';
 
 // Defaults to the original demo business; pass an issuer id as the first
@@ -17,18 +17,17 @@ const DAYS_OF_HISTORY = 95;
 const BASE_DAILY_USD = 165;
 const VARIANCE_USD = 18; // deterministic, small — keeps volatilityScore low
 
-function main() {
-  const db = getDb();
-  const business = db.prepare('SELECT issuer_id FROM businesses WHERE issuer_id = ?').get(ISSUER_ID);
+async function main() {
+  const business = await db.get('SELECT issuer_id FROM businesses WHERE issuer_id = ?', ISSUER_ID);
   if (!business) {
     throw new Error(`business ${ISSUER_ID} not found — register it first via POST /api/business/register`);
   }
 
   // Clear any prior transactions for this business (earlier ad-hoc manual
   // test entries from development) so the seeded history is coherent.
-  db.prepare('DELETE FROM transactions WHERE issuer_id = ?').run(ISSUER_ID);
+  await db.run('DELETE FROM transactions WHERE issuer_id = ?', ISSUER_ID);
 
-  markBusinessAsDemo(ISSUER_ID);
+  await markBusinessAsDemo(ISSUER_ID);
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   const transactions: { amountUSD: bigint; timestampSeconds: number }[] = [];
@@ -42,7 +41,7 @@ function main() {
     transactions.push({ amountUSD, timestampSeconds });
   }
 
-  seedDemoTransactions(ISSUER_ID, transactions);
+  await seedDemoTransactions(ISSUER_ID, transactions);
 
   const totalUSD = transactions.reduce((sum, t) => sum + t.amountUSD, 0n);
   console.log(`Seeded ${transactions.length} synthetic-demo transactions for ${ISSUER_ID}`);
@@ -50,4 +49,9 @@ function main() {
   console.log(`Earliest transaction: ${new Date((nowSeconds - DAYS_OF_HISTORY * 86_400) * 1000).toISOString()}`);
 }
 
-main();
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

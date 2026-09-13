@@ -1,11 +1,11 @@
 import { Fragment } from 'react';
-import { getDb } from '@/lib/db';
+import { db } from '@/lib/db';
 import { getPlatformStats } from '@/lib/business';
-
-// Reads live SQLite state; must not be prerendered at build time.
-export const dynamic = 'force-dynamic';
 import { PROOF_ENTRIES, hashscanToken, hashscanTransaction, SUBGRAPH_QUERY_URL } from '@/lib/explorer';
 import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from '../Icons';
+
+// Reads live database state; must not be prerendered at build time.
+export const dynamic = 'force-dynamic';
 
 const PIPELINE = [
   { icon: <StoreIcon />, label: 'Business', sub: 'Real revenue' },
@@ -69,17 +69,15 @@ interface IssuedBondRow {
 /// Same real query proof/page.tsx uses — kept local (not lib/bonds.ts) so
 /// this page doesn't pull in ats-client's heavy browser-runner import chain
 /// just to render slide content.
-function listIssuedBonds(): IssuedBondRow[] {
-  return getDb()
-    .prepare(
-      `SELECT b.issuer_id, b.bond_token_id, b.transaction_id, b.coupon_bps, b.face_value_usd, bus.name
-       FROM bonds b
-       JOIN businesses bus ON bus.issuer_id = b.issuer_id
-       WHERE b.status = 'issued'
-       ORDER BY b.created_at DESC
-       LIMIT 3`,
-    )
-    .all() as IssuedBondRow[];
+function listIssuedBonds(): Promise<IssuedBondRow[]> {
+  return db.all<IssuedBondRow>(
+    `SELECT b.issuer_id, b.bond_token_id, b.transaction_id, b.coupon_bps, b.face_value_usd, bus.name
+     FROM bonds b
+     JOIN businesses bus ON bus.issuer_id = b.issuer_id
+     WHERE b.status = 'issued'
+     ORDER BY b.created_at DESC
+     LIMIT 3`,
+  );
 }
 
 function Slide({
@@ -101,10 +99,10 @@ function Slide({
   );
 }
 
-export default function PitchPage() {
-  const stats = getPlatformStats();
+export default async function PitchPage() {
+  const stats = await getPlatformStats();
   const totalFaceValueUsd = Number(BigInt(stats.totalFaceValueUsdMicros) / 1_000_000n);
-  const bonds = listIssuedBonds();
+  const bonds = await listIssuedBonds();
 
   return (
     <main className="page-wide pitch-deck">

@@ -18,14 +18,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'missing code or state on Stripe OAuth callback' }, { status: 400 });
   }
 
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
   try {
     const { stripeAccountId, accessToken } = await exchangeStripeOAuthCode(code);
-    setStripeConnection(issuerId, stripeAccountId, accessToken);
+    await setStripeConnection(issuerId, stripeAccountId, accessToken);
     return NextResponse.redirect(new URL(`/business/${issuerId}`, req.url));
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });

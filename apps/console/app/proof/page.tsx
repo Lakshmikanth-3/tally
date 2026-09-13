@@ -1,7 +1,7 @@
-import { getDb } from '@/lib/db';
+import { db } from '@/lib/db';
 import { PROOF_ENTRIES, hashscanToken, hashscanTransaction, SUBGRAPH_QUERY_URL } from '@/lib/explorer';
 
-// Reads live SQLite state; must not be prerendered at build time.
+// Reads live database state; must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
 interface IssuedBondRow {
@@ -17,17 +17,15 @@ interface IssuedBondRow {
 
 /// Every real bond this instance has actually issued, newest first — each
 /// one independently checkable on HashScan.
-function listIssuedBonds(): IssuedBondRow[] {
-  return getDb()
-    .prepare(
-      `SELECT b.issuer_id, b.bond_token_id, b.evm_diamond_address, b.transaction_id,
-              b.coupon_bps, b.face_value_usd, b.created_at, bus.name
-       FROM bonds b
-       JOIN businesses bus ON bus.issuer_id = b.issuer_id
-       WHERE b.status = 'issued'
-       ORDER BY b.created_at DESC`,
-    )
-    .all() as IssuedBondRow[];
+function listIssuedBonds(): Promise<IssuedBondRow[]> {
+  return db.all<IssuedBondRow>(
+    `SELECT b.issuer_id, b.bond_token_id, b.evm_diamond_address, b.transaction_id,
+            b.coupon_bps, b.face_value_usd, b.created_at, bus.name
+     FROM bonds b
+     JOIN businesses bus ON bus.issuer_id = b.issuer_id
+     WHERE b.status = 'issued'
+     ORDER BY b.created_at DESC`,
+  );
 }
 
 const GROUPS = ['Hedera testnet', 'Ethereum Sepolia', 'The Graph'] as const;
@@ -48,8 +46,8 @@ const SAMPLE_QUERY = `{
   }
 }`;
 
-export default function ProofPage() {
-  const bonds = listIssuedBonds();
+export default async function ProofPage() {
+  const bonds = await listIssuedBonds();
 
   return (
     <main className="page-wide">

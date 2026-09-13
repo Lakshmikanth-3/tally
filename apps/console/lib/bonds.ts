@@ -12,7 +12,7 @@ import {
   type IssuedBond,
 } from '@tally/ats-client';
 import { startBrowserSignerSession } from '@tally/ats-client/browser-runner/runner';
-import { getDb } from './db';
+import { db } from './db';
 import { getBusiness, getRevenueSnapshot } from './business';
 
 // runner.ts's page runs entry.ts's bundle, which attaches this same shape to
@@ -95,35 +95,32 @@ type FreshBondFields =
   | 'redeemTransactionId'
   | 'redeemOnTime';
 
-function persistBond(record: Omit<BondRecord, FreshBondFields>): BondRecord {
+async function persistBond(record: Omit<BondRecord, FreshBondFields>): Promise<BondRecord> {
   const createdAt = Math.floor(Date.now() / 1000);
-  getDb()
-    .prepare(
-      `INSERT INTO bonds (
-        issuer_id, status, reason_code, coupon_bps, face_value_usd, symbol, isin,
-        bond_token_id, evm_diamond_address, transaction_id, error_message,
-        starting_date_seconds, maturity_date_seconds, created_at,
-        number_of_coupons, coupon_interval_seconds
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      record.issuerId,
-      record.status,
-      record.reasonCode,
-      record.couponBps,
-      record.faceValueUsd,
-      record.symbol,
-      record.isin,
-      record.bondTokenId,
-      record.evmDiamondAddress,
-      record.transactionId,
-      record.errorMessage,
-      record.startingDateSeconds,
-      record.maturityDateSeconds,
-      createdAt,
-      record.numberOfCoupons,
-      record.couponIntervalSeconds,
-    );
+  await db.run(
+    `INSERT INTO bonds (
+      issuer_id, status, reason_code, coupon_bps, face_value_usd, symbol, isin,
+      bond_token_id, evm_diamond_address, transaction_id, error_message,
+      starting_date_seconds, maturity_date_seconds, created_at,
+      number_of_coupons, coupon_interval_seconds
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    record.issuerId,
+    record.status,
+    record.reasonCode,
+    record.couponBps,
+    record.faceValueUsd,
+    record.symbol,
+    record.isin,
+    record.bondTokenId,
+    record.evmDiamondAddress,
+    record.transactionId,
+    record.errorMessage,
+    record.startingDateSeconds,
+    record.maturityDateSeconds,
+    createdAt,
+    record.numberOfCoupons,
+    record.couponIntervalSeconds,
+  );
   return {
     ...record,
     createdAt,
@@ -179,10 +176,8 @@ function rowToBondRecord(row: BondRow): BondRecord {
   };
 }
 
-export function getLatestBond(issuerId: string): BondRecord | null {
-  const row = getDb().prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC LIMIT 1').get(issuerId) as
-    | BondRow
-    | undefined;
+export async function getLatestBond(issuerId: string): Promise<BondRecord | null> {
+  const row = await db.get<BondRow>('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC LIMIT 1', issuerId);
   return row ? rowToBondRecord(row) : null;
 }
 
@@ -190,10 +185,15 @@ export function getLatestBond(issuerId: string): BondRecord | null {
 /// the secondary-market fill route to go from a bid order's on-chain
 /// bondToken address back to the Hedera-format bondTokenId depositBondForResale
 /// needs, since the on-chain Order struct only ever carries the EVM address.
-export function findBondByEvmDiamondAddress(evmDiamondAddress: string): BondRecord | null {
-  const row = getDb()
-    .prepare("SELECT * FROM bonds WHERE evm_diamond_address = ? AND status = 'issued' ORDER BY created_at DESC LIMIT 1")
-    .get(evmDiamondAddress) as BondRow | undefined;
+export async function findBondByEvmDiamondAddress(evmDiamondAddress: string): Promise<BondRecord | null> {
+  // Case-insensitive: the on-chain Order struct returns a checksummed
+  // address, which isn't guaranteed to match the casing stored at issuance.
+  // SQLite's = on TEXT happened to be used with matching casing; Postgres's
+  // = is strictly case-sensitive, so compare lowercased on both sides.
+  const row = await db.get<BondRow>(
+    "SELECT * FROM bonds WHERE LOWER(evm_diamond_address) = LOWER(?) AND status = 'issued' ORDER BY created_at DESC LIMIT 1",
+    evmDiamondAddress,
+  );
   return row ? rowToBondRecord(row) : null;
 }
 
@@ -206,18 +206,19 @@ export function findBondByEvmDiamondAddress(evmDiamondAddress: string): BondReco
 /// shadow it, and coupon arming, settlement and redemption would all start
 /// reporting "no issued bond" for a bond that plainly exists — silently
 /// stranding its coupons and leaving it unredeemable.
-export function getLatestIssuedBond(issuerId: string): BondRecord | null {
-  const row = getDb()
-    .prepare("SELECT * FROM bonds WHERE issuer_id = ? AND status = 'issued' ORDER BY created_at DESC LIMIT 1")
-    .get(issuerId) as BondRow | undefined;
+export async function getLatestIssuedBond(issuerId: string): Promise<BondRecord | null> {
+  const row = await db.get<BondRow>(
+    "SELECT * FROM bonds WHERE issuer_id = ? AND status = 'issued' ORDER BY created_at DESC LIMIT 1",
+    issuerId,
+  );
   return row ? rowToBondRecord(row) : null;
 }
 
 /// Every real underwriting run for this issuer, newest first — the bonds
 /// table is insert-only per run (declined/issued/failed), so this is
 /// already a true history, not a derived or reconstructed one.
-export function listBondsForIssuer(issuerId: string): BondRecord[] {
-  const rows = getDb().prepare('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC').all(issuerId) as BondRow[];
+export async function listBondsForIssuer(issuerId: string): Promise<BondRecord[]> {
+  const rows = await db.all<BondRow>('SELECT * FROM bonds WHERE issuer_id = ? ORDER BY created_at DESC', issuerId);
   return rows.map(rowToBondRecord);
 }
 
@@ -227,23 +228,26 @@ export function listBondsForIssuer(issuerId: string): BondRecord[] {
 /// most recent one is the live instrument. Used by the lifecycle poller to
 /// find real work (coupons to arm/anchor, redemptions due) without an
 /// issuer id supplied ahead of time.
-export function listAllIssuedBonds(): BondRecord[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT b.* FROM bonds b
-       WHERE b.status = 'issued'
-       AND b.created_at = (SELECT MAX(b2.created_at) FROM bonds b2 WHERE b2.issuer_id = b.issuer_id AND b2.status = 'issued')`,
-    )
-    .all() as BondRow[];
+export async function listAllIssuedBonds(): Promise<BondRecord[]> {
+  const rows = await db.all<BondRow>(
+    `SELECT b.* FROM bonds b
+     WHERE b.status = 'issued'
+     AND b.created_at = (SELECT MAX(b2.created_at) FROM bonds b2 WHERE b2.issuer_id = b.issuer_id AND b2.status = 'issued')`,
+  );
   return rows.map(rowToBondRecord);
 }
 
 /// Records a real, already-succeeded redemption — never called
 /// speculatively ahead of Bond.fullRedeemAtMaturity actually succeeding.
-export function markBondRedeemed(issuerId: string, createdAt: number, transactionId: string, onTime: boolean): void {
-  getDb()
-    .prepare('UPDATE bonds SET redeemed_at = ?, redeem_transaction_id = ?, redeem_on_time = ? WHERE issuer_id = ? AND created_at = ?')
-    .run(Math.floor(Date.now() / 1000), transactionId, onTime ? 1 : 0, issuerId, createdAt);
+export async function markBondRedeemed(issuerId: string, createdAt: number, transactionId: string, onTime: boolean): Promise<void> {
+  await db.run(
+    'UPDATE bonds SET redeemed_at = ?, redeem_transaction_id = ?, redeem_on_time = ? WHERE issuer_id = ? AND created_at = ?',
+    Math.floor(Date.now() / 1000),
+    transactionId,
+    onTime ? 1 : 0,
+    issuerId,
+    createdAt,
+  );
 }
 
 /// Runs the real underwriting verdict against this business's real revenue
@@ -271,7 +275,7 @@ export interface IssueBondOptions {
 }
 
 export async function issueBondForBusiness(issuerId: string, options: IssueBondOptions = {}): Promise<BondRecord> {
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) throw new Error(`business ${issuerId} not found`);
 
   const termSeconds = options.termSeconds ?? MATURITY_SECONDS;
@@ -290,7 +294,7 @@ export async function issueBondForBusiness(issuerId: string, options: IssueBondO
   // outstanding: once it has genuinely been redeemed, the business has no
   // live obligation and is free to raise again, which is the real-world
   // rule this is modelling (not "one bond ever").
-  const latest = getLatestBond(issuerId);
+  const latest = await getLatestBond(issuerId);
   if (latest?.status === 'issued' && !latest.redeemedAt) {
     throw new Error(`business ${issuerId} already has an outstanding bond — redeem it before issuing another`);
   }

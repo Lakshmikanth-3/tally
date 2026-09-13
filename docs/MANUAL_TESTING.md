@@ -237,17 +237,19 @@ curl -s -X POST http://localhost:3000/api/market/orders   -H 'X-Forwarded-For: 2
 
 ---
 
-## 13. Read-only showcase mode
+## 13. Hosted mode
 
-What the hosted deployment runs:
+What the hosted Vercel deployment runs:
 
 ```bash
-TALLY_READ_ONLY=1 npx next dev -p 3100
+TALLY_HOSTED=1 npx next dev -p 3100
 ```
 
-**Expected:** a red banner on every page, real data from the scrubbed
-`showcase.db` snapshot, and any write action refused with `501` and a plain
-explanation. The lifecycle sweep stays off — it has no key and no browser there.
+**Expected:** a banner on every page, the same live data as the local
+console (both read the shared Postgres database), registration and Stripe
+sync working, and every signing action (issue, arm coupons, escrow, fill)
+refused with `501` and a plain explanation. The lifecycle sweep stays off —
+it has no key and no browser there.
 
 ---
 

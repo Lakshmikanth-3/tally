@@ -27,11 +27,7 @@ const nextConfig: NextConfig = {
   // package Tally never installs since it only drives Chromium over CDP).
   // Pushing the same names onto webpack's own `externals` is the fix that
   // actually took effect.
-  serverExternalPackages: ['better-sqlite3', 'playwright', 'playwright-core'],
-  // The hosted showcase reads a committed SQLite snapshot. Nothing imports
-  // it, so Next's file tracing can't infer it — without this the deployed
-  // function has no database at all.
-  outputFileTracingIncludes: { '/**': ['./showcase.db'] },
+  serverExternalPackages: ['pg', 'playwright', 'playwright-core'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = [...(config.externals ?? []), 'playwright', 'playwright-core'];

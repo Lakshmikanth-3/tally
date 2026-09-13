@@ -23,8 +23,8 @@ function formatDate(seconds: number): string {
 /// table already records one row per run (never overwritten), so a re-run
 /// after 30+ days of revenue shows up as a second, independent verdict
 /// rather than replacing the first one.
-export default function UnderwritingHistory({ issuerId }: { issuerId: string }) {
-  const runs = listBondsForIssuer(issuerId);
+export default async function UnderwritingHistory({ issuerId }: { issuerId: string }) {
+  const runs = await listBondsForIssuer(issuerId);
   if (runs.length <= 1) return null; // BondPanel already shows the single/latest run — avoid a redundant one-row history
 
   return (

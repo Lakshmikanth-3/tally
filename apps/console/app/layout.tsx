@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Pixelify_Sans } from 'next/font/google';
 import './globals.css';
 import Nav from './Nav';
-import { IS_READ_ONLY } from '@/lib/db';
+import { IS_HOSTED } from '@/lib/db';
 import VideoBackground from './VideoBackground';
 
 // Geist carries the whole interface; Pixelify is used sparingly as a
@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <VideoBackground />
         <Nav />
-        {IS_READ_ONLY && (
+        {IS_HOSTED && (
           <div
             style={{
               background: 'var(--danger-soft)',
@@ -34,9 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               textAlign: 'center',
             }}
           >
-            <strong>Read-only showcase.</strong> Every figure and link below is real on-chain data from a live snapshot.
-            Actions that move value (issuing a bond, arming coupons, filling an order) sign with a real custodian key
-            through a real headless browser, so they run only against the local app — see <code>DEMO.md</code>.
+            <strong>Hosted deployment.</strong> Registering a business, connecting Stripe and reading revenue all work
+            here, against the same live database as the local console. Actions that move value (issuing a bond, arming
+            coupons, filling an order) sign with a real custodian key through a real headless browser, so they run from
+            the local console — see <code>DEMO.md</code>.
           </div>
         )}
         {children}

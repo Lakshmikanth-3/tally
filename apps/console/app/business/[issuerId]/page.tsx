@@ -14,10 +14,11 @@ function formatMicrosUSD(micros: bigint): string {
 
 export default async function BusinessPage({ params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) notFound();
 
-  const stripeAccountId = getStripeAccountId(issuerId);
+  const stripeAccountId = await getStripeAccountId(issuerId);
+  const latestBond = await getLatestBond(issuerId);
   const testMode = isStripeTestMode();
   const accountCountry = stripeAccountId ? await getStripeAccountCountry(stripeAccountId) : null;
   // Stripe blocks USD invoice payment on India-domiciled accounts under a
@@ -118,12 +119,9 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
 
       <UnderwritingHistory issuerId={issuerId} />
 
-      {(() => {
-        const bond = getLatestBond(issuerId);
-        if (bond?.status !== 'issued' || !bond.evmDiamondAddress || !bond.bondTokenId) return null;
-        const bondId = computeBondId(bond.evmDiamondAddress, bond.bondTokenId);
-        return <LifecycleTimeline bondId={bondId} />;
-      })()}
+      {latestBond?.status === 'issued' && latestBond.evmDiamondAddress && latestBond.bondTokenId && (
+        <LifecycleTimeline bondId={computeBondId(latestBond.evmDiamondAddress, latestBond.bondTokenId)} />
+      )}
     </main>
   );
 }

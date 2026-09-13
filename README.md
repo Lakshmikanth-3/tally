@@ -90,32 +90,43 @@ cd apps/console && pnpm dev  # http://localhost:3000
 ```
 
 A real `.env` at the repo root is required (see `.env.example`); the console
-loads it automatically.
+loads it automatically. `apps/console/.env.local` must also carry
+`DATABASE_URL` — a Postgres connection string (Tally uses Neon, connected
+through Vercel's Storage tab).
 
-### Why this runs locally rather than on a serverless host
+Production builds need a larger Node heap than the default:
+`NODE_OPTIONS=--max-old-space-size=6144 pnpm build`.
 
-Tally is deliberately not a serverless app, and deploying it to one would
-produce a broken demo rather than a better one:
+### Where things run
 
-- **Bond issuance drives a real headless Chromium.** Hedera's Asset
-  Tokenization Studio SDK gates its write path behind real browser globals
-  (`Injectable.isWeb()`, `window.ethereum`), so `packages/ats-client` signs
-  through an actual Playwright-driven browser with a real wallet shim. That
-  cannot run inside a serverless function — no amount of migration changes
-  it.
+State lives in one shared **Postgres** database, so the local console and
+the hosted Vercel deployment always show the same businesses, bonds and
+coupons.
+
+**Runs on Vercel:** every page, business registration, Stripe Connect and
+revenue sync, the `/revenue` endpoint Chainlink's DON reads, the market book
+and the public register.
+
+**Runs only from the local console**, by design:
+
+- **Bond issuance, escrow and order fills drive a real headless Chromium.**
+  Hedera's Asset Tokenization Studio SDK gates its write path behind real
+  browser globals (`Injectable.isWeb()`, `window.ethereum`), so
+  `packages/ats-client` signs through an actual Playwright-driven browser
+  with a real wallet shim — and holds the custodian key. Neither belongs in
+  a serverless function. The hosted deployment refuses these routes with an
+  explicit `501`; their results still land in the shared database and show
+  up on the hosted site immediately.
 - **Settlement is a long-lived background sweep.** `instrumentation.ts`
   arms coupons, confirms payments on the mirror node and anchors events on a
-  timer. Serverless has no long-lived process to run it.
-- **State is a local SQLite file.** Every business, bond and coupon row
-  lives in `apps/console/tally.db` on a writable filesystem.
-- **The write routes are deliberately local-only.** Anything that moves real
-  value is refused when the request arrives through a proxy unless it
-  presents `TALLY_ADMIN_TOKEN` — see `apps/console/lib/api-guard.ts`. A
-  platform edge proxy trips that by design.
+  timer, which needs a long-lived process.
+- **Value-moving routes are local-only even locally.** A request that
+  arrives through a proxy is refused unless it presents `TALLY_ADMIN_TOKEN`
+  — see `apps/console/lib/api-guard.ts`.
 
-If a public URL is needed for a live walkthrough, tunnel the local app
-(`ngrok http 3000`). `/revenue` stays reachable for Chainlink's DON via its
-own bearer token, while the value-moving routes stay refused.
+To move existing data from an older SQLite `tally.db` into Postgres:
+`cd apps/console && npx tsx --env-file=.env.local scripts/migrate-sqlite-to-postgres.ts tally.db`
+(idempotent — safe to re-run).
 
 ## Repository layout
 

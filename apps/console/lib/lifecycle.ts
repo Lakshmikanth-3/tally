@@ -31,7 +31,7 @@ export interface LifecycleRunSummary {
 /// waiting out the entire sweep.
 export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
   const summary: LifecycleRunSummary = { armedCoupons: [], anchoredCoupons: [], redeemedBonds: [], errors: [] };
-  const bonds = listAllIssuedBonds();
+  const bonds = await listAllIssuedBonds();
   const nowSeconds = Math.floor(Date.now() / 1000);
 
   for (const bond of bonds) {
@@ -59,7 +59,7 @@ export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
 
     // Anchor a Coupon lifecycle event for each armed coupon whose real
     // scheduled payment has actually executed — never speculatively.
-    const duePayments = listCouponPayments(bond.issuerId, bond.createdAt).filter(
+    const duePayments = (await listCouponPayments(bond.issuerId, bond.createdAt)).filter(
       (c) => c.scheduleId !== null && c.anchoredAt === null && c.dueDateSeconds <= nowSeconds,
     );
     if (duePayments.length > 0) {
@@ -89,7 +89,7 @@ export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
               hcsTxId: coupon.scheduleId!,
             });
             if (outcome.status === 'anchored') {
-              markCouponPaymentAnchored(bond.issuerId, bond.createdAt, coupon.couponIndex, outcome.anchor.transactionId, outcome.onTime);
+              await markCouponPaymentAnchored(bond.issuerId, bond.createdAt, coupon.couponIndex, outcome.anchor.transactionId, outcome.onTime);
               summary.anchoredCoupons.push(`${bond.issuerId}#${coupon.couponIndex}`);
             }
           }

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ord
   }
 
   if (order.isBid) {
-    const bond = findBondByEvmDiamondAddress(order.bondToken);
+    const bond = await findBondByEvmDiamondAddress(order.bondToken);
     if (!bond || !bond.bondTokenId) {
       return NextResponse.json({ error: `no issued bond found for security ${order.bondToken}` }, { status: 404 });
     }

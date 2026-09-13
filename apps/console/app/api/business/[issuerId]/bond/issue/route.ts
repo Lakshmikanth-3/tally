@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ iss
   if (refusal) return refusal;
 
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }

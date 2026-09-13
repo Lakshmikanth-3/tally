@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const business = registerBusiness(name);
+    const business = await registerBusiness(name);
     return NextResponse.json(business, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

@@ -9,7 +9,7 @@ import { getStripeConnectAuthorizeUrl } from '@/lib/stripe';
 /// carry a dynamic path segment.
 export async function GET(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }

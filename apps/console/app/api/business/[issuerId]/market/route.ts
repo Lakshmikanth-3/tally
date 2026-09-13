@@ -16,12 +16,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ iss
   if (refusal) return refusal;
 
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
-  const bond = getLatestIssuedBond(issuerId);
+  const bond = await getLatestIssuedBond(issuerId);
   if (!bond || !bond.evmDiamondAddress || !bond.bondTokenId) {
     return NextResponse.json({ error: `business ${issuerId} has no issued bond to list` }, { status: 400 });
   }

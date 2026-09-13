@@ -225,7 +225,7 @@ signing service, Tally built its own solution:
 |---|-------|--------|
 | 1 | Scaffold | ✅ Done |
 | 2 | Revenue pipeline (Stripe Connect) | ✅ Done |
-| 3 | CRE confidential underwriting workflow | ✅ Logic done, simulation-verified. ⏳ Live deploy pending Chainlink's private-beta access review |
+| 3 | CRE confidential underwriting workflow | ✅ Deployed live and executing on Chainlink's DON. ⚠️ Confidential enclave not yet active on Chainlink's side (`DON members not set`) |
 | 4 | On-chain infra (contracts + subgraph) | ✅ Done, deployed, verified live |
 | 5 | No-keeper settlement | ✅ Done, verified live |
 | 6 | Bond issuance + redemption signing | ✅ Done, verified live end-to-end |
@@ -235,10 +235,13 @@ signing service, Tally built its own solution:
 
 ## 7. What's left
 
-- **CRE live deployment** — waiting on Chainlink's review of the submitted
-  `cre account access` request. No action item until they respond; the demo
-  can honestly fall back to simulation output in the meantime (see
-  `docs/DEMO_SCRIPT.md` step 4).
+- **CRE confidential enclave** — deploy access is enabled and the workflow
+  runs live, but the TEE itself fails with `DON members not set`, a
+  Chainlink-side provisioning step for the private registry. Until that
+  clears, runs are real but not confidential, and are described that way.
+- **Hosted revenue endpoint for CRE** — the database is now shared Postgres,
+  so the Vercel deployment can serve `/revenue` to Chainlink's DON without a
+  tunnel once `REVENUE_API_TOKEN` and the Stripe keys are set in Vercel.
 - **Demo rehearsal and video recording** — the script is written and every
   step has been live-verified working; recording it is a human action.
 - Everything else has real, committed, verified work behind it.
@@ -253,7 +256,7 @@ signing service, Tally built its own solution:
 | Live subgraph | https://thegraph.com/studio/subgraph/tally-register |
 | Example issued bond (Hedera testnet) | `0.0.10425775` |
 | Custodian account (Hedera testnet ECDSA) | `0.0.8050897` / `0xcfFc4DA1Cb5C88152e5f90994048f363Bd715777` |
-| CRE org | `org_R6TuYlBzHCDAyp1H` (deploy access: pending review) |
+| CRE org | `org_R6TuYlBzHCDAyp1H` (deploy access: enabled) |
 
 ## 9. Codebase statistics
 

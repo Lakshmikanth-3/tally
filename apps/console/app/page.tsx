@@ -1,11 +1,11 @@
 import { Fragment } from 'react';
 import { getPlatformStats } from '@/lib/business';
 import CountUp from './CountUp';
+import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from './Icons';
 
-// Reads live SQLite state; without this `next build` prerenders the stats
+// Reads live database state; without this `next build` prerenders the stats
 // once and they never move again after a bond is issued.
 export const dynamic = 'force-dynamic';
-import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from './Icons';
 
 const PIPELINE = [
   { icon: <StoreIcon />, label: 'Business', sub: 'Real revenue' },
@@ -40,8 +40,8 @@ const FEATURES = [
   },
 ];
 
-export default function HomePage() {
-  const stats = getPlatformStats();
+export default async function HomePage() {
+  const stats = await getPlatformStats();
   const totalFaceValueUsd = Number(BigInt(stats.totalFaceValueUsdMicros) / 1_000_000n);
 
   return (

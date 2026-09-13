@@ -20,7 +20,7 @@ export default async function MarketPage() {
     loadError = (err as Error).message;
   }
 
-  const bidCandidates = listAllIssuedBonds()
+  const bidCandidates = (await listAllIssuedBonds())
     .filter((b) => b.evmDiamondAddress && b.bondTokenId)
     .map((b) => ({
       bondId: computeBondId(b.evmDiamondAddress!, b.bondTokenId!),

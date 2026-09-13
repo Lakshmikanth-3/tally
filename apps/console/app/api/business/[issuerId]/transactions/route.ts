@@ -8,14 +8,14 @@ import { getBusiness, getRevenueSnapshot, listBusinessTransactions, ProcessorCon
 /// never a stale local cache.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
   try {
     await getRevenueSnapshot(issuerId); // triggers the real Stripe sync as a side effect
-    return NextResponse.json({ transactions: listBusinessTransactions(issuerId) });
+    return NextResponse.json({ transactions: await listBusinessTransactions(issuerId) });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ iss
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
-  const business = getBusiness(issuerId);
+  const business = await getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ iss
 
   try {
     const amountUSD = parseUsdToMicros(body.amountUSD);
-    submitTransaction(issuerId, amountUSD, timestampSeconds);
+    await submitTransaction(issuerId, amountUSD, timestampSeconds);
     return NextResponse.json({ issuerId, amountUSD: amountUSD.toString(), timestampSeconds }, { status: 201 });
   } catch (err) {
     if (err instanceof ProcessorConnectedError) {

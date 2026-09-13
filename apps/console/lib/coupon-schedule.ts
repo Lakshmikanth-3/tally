@@ -1,5 +1,5 @@
 import { armCouponPayment, buildHederaClient } from '@tally/scheduler';
-import { getDb } from './db';
+import { db, withTransaction } from './db';
 import { getLatestIssuedBond, type BondRecord } from './bonds';
 import { withCustodianLock } from './custodian-lock';
 
@@ -77,10 +77,12 @@ function rowToCouponPayment(row: CouponPaymentRow): CouponPayment {
   };
 }
 
-export function listCouponPayments(issuerId: string, bondCreatedAt: number): CouponPayment[] {
-  const rows = getDb()
-    .prepare('SELECT * FROM coupon_payments WHERE issuer_id = ? AND bond_created_at = ? ORDER BY coupon_index ASC')
-    .all(issuerId, bondCreatedAt) as CouponPaymentRow[];
+export async function listCouponPayments(issuerId: string, bondCreatedAt: number): Promise<CouponPayment[]> {
+  const rows = await db.all<CouponPaymentRow>(
+    'SELECT * FROM coupon_payments WHERE issuer_id = ? AND bond_created_at = ? ORDER BY coupon_index ASC',
+    issuerId,
+    bondCreatedAt,
+  );
   return rows.map(rowToCouponPayment);
 }
 
@@ -105,11 +107,11 @@ export function computeCouponDueDates(
 /// Writes the bond's full real coupon schedule — every due date it owes
 /// across its term — without arming any of them yet. Idempotent: re-running
 /// leaves existing rows (and anything already armed) untouched.
-export function planCouponSchedule(bond: BondRecord): CouponPayment[] {
+export async function planCouponSchedule(bond: BondRecord): Promise<CouponPayment[]> {
   if (!bond.startingDateSeconds || !bond.maturityDateSeconds) {
     throw new Error(`bond for ${bond.issuerId} has no real dates to derive a coupon schedule from`);
   }
-  const existing = listCouponPayments(bond.issuerId, bond.createdAt);
+  const existing = await listCouponPayments(bond.issuerId, bond.createdAt);
   if (existing.length === bond.numberOfCoupons) return existing;
 
   const dueDates = computeCouponDueDates(
@@ -119,14 +121,18 @@ export function planCouponSchedule(bond: BondRecord): CouponPayment[] {
     bond.couponIntervalSeconds,
   );
 
-  const insert = getDb().prepare(
-    `INSERT OR IGNORE INTO coupon_payments (issuer_id, bond_created_at, coupon_index, due_date_seconds)
-     VALUES (?, ?, ?, ?)`,
-  );
-  const insertAll = getDb().transaction(() => {
-    dueDates.forEach((dueDateSeconds, i) => insert.run(bond.issuerId, bond.createdAt, i + 1, dueDateSeconds));
+  await withTransaction(async (tx) => {
+    for (const [i, dueDateSeconds] of dueDates.entries()) {
+      await tx.run(
+        `INSERT INTO coupon_payments (issuer_id, bond_created_at, coupon_index, due_date_seconds)
+         VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+        bond.issuerId,
+        bond.createdAt,
+        i + 1,
+        dueDateSeconds,
+      );
+    }
   });
-  insertAll();
 
   return listCouponPayments(bond.issuerId, bond.createdAt);
 }
@@ -152,12 +158,12 @@ export async function armCouponForBond(issuerId: string): Promise<ArmedCouponRes
 }
 
 async function armCouponForBondUnlocked(issuerId: string): Promise<ArmedCouponResult[]> {
-  const bond = getLatestIssuedBond(issuerId);
+  const bond = await getLatestIssuedBond(issuerId);
   if (!bond || !bond.startingDateSeconds || !bond.maturityDateSeconds || !bond.couponBps || !bond.faceValueUsd) {
     throw new Error(`business ${issuerId} has no issued bond to arm a coupon for`);
   }
 
-  const schedule = planCouponSchedule(bond);
+  const schedule = await planCouponSchedule(bond);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const armable = schedule.filter(
     (c) => c.scheduleId === null && c.dueDateSeconds > nowSeconds && c.dueDateSeconds - nowSeconds <= SCHEDULABLE_HORIZON_SECONDS,
@@ -199,12 +205,16 @@ async function armCouponForBondUnlocked(issuerId: string): Promise<ArmedCouponRe
         memo: `tally-coupon-${issuerId}-${coupon.couponIndex}`,
       });
 
-      getDb()
-        .prepare(
-          `UPDATE coupon_payments SET schedule_id = ?, amount_hbar = ?, armed_at = ?
-           WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
-        )
-        .run(armed.scheduleId, String(amountHbar), Math.floor(Date.now() / 1000), issuerId, bond.createdAt, coupon.couponIndex);
+      await db.run(
+        `UPDATE coupon_payments SET schedule_id = ?, amount_hbar = ?, armed_at = ?
+         WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
+        armed.scheduleId,
+        String(amountHbar),
+        Math.floor(Date.now() / 1000),
+        issuerId,
+        bond.createdAt,
+        coupon.couponIndex,
+      );
 
       results.push({
         scheduleId: armed.scheduleId,
@@ -224,19 +234,23 @@ async function armCouponForBondUnlocked(issuerId: string): Promise<ArmedCouponRe
 /// Records that one coupon's real payment executed and its Coupon lifecycle
 /// event was anchored — only ever after a real mirror-node confirmation that
 /// the scheduled transfer actually ran (see lib/lifecycle.ts).
-export function markCouponPaymentAnchored(
+export async function markCouponPaymentAnchored(
   issuerId: string,
   bondCreatedAt: number,
   couponIndex: number,
   anchorTxId: string,
   onTime: boolean,
-): void {
-  getDb()
-    .prepare(
-      `UPDATE coupon_payments SET anchored_at = ?, anchor_tx_id = ?, anchored_on_time = ?
-       WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
-    )
-    .run(Math.floor(Date.now() / 1000), anchorTxId, onTime ? 1 : 0, issuerId, bondCreatedAt, couponIndex);
+): Promise<void> {
+  await db.run(
+    `UPDATE coupon_payments SET anchored_at = ?, anchor_tx_id = ?, anchored_on_time = ?
+     WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
+    Math.floor(Date.now() / 1000),
+    anchorTxId,
+    onTime ? 1 : 0,
+    issuerId,
+    bondCreatedAt,
+    couponIndex,
+  );
 }
 
 function requireEnv(name: string): string {

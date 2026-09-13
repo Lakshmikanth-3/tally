@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { getPlatformStats, listAllBusinesses } from '@/lib/business';
 import CountUp from '../CountUp';
 
-// Reads live SQLite state; must not be prerendered at build time.
+// Reads live database state; must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
 function pillForBond(status: string): { className: string; label: string } {
@@ -18,9 +18,8 @@ function pillForBond(status: string): { className: string; label: string } {
   }
 }
 
-export default function DashboardPage() {
-  const businesses = listAllBusinesses();
-  const stats = getPlatformStats();
+export default async function DashboardPage() {
+  const [businesses, stats] = await Promise.all([listAllBusinesses(), getPlatformStats()]);
   const totalFaceValueUsd = Number(BigInt(stats.totalFaceValueUsdMicros) / 1_000_000n);
 
   return (

@@ -51,7 +51,7 @@ export async function redeemBondForBusiness(issuerId: string): Promise<RedeemBon
 }
 
 async function redeemBondForBusinessUnlocked(issuerId: string): Promise<RedeemBondResult> {
-  const bond = getLatestIssuedBond(issuerId);
+  const bond = await getLatestIssuedBond(issuerId);
   if (!bond || !bond.bondTokenId || !bond.evmDiamondAddress || !bond.maturityDateSeconds) {
     throw new Error(`business ${issuerId} has no issued bond to redeem`);
   }
@@ -129,7 +129,7 @@ async function redeemBondForBusinessUnlocked(issuerId: string): Promise<RedeemBo
     client.close();
   }
 
-  markBondRedeemed(issuerId, bond.createdAt, redeemTransactionId, onTime);
+  await markBondRedeemed(issuerId, bond.createdAt, redeemTransactionId, onTime);
 
   return { transactionId: redeemTransactionId, onTime, anchorTransactionId };
 }

@@ -8,15 +8,15 @@ import { armCouponForBond, listCouponPayments, planCouponSchedule } from '@/lib/
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
   try {
-    const bond = getLatestIssuedBond(issuerId);
+    const bond = await getLatestIssuedBond(issuerId);
     if (!bond || !bond.startingDateSeconds || !bond.maturityDateSeconds) {
       return NextResponse.json({ payments: [] });
     }
     // Planning is idempotent and pure bookkeeping (no chain calls), so a
     // bond issued before multi-coupon support still gets its real schedule
     // filled in the first time it's viewed.
-    planCouponSchedule(bond);
-    return NextResponse.json({ payments: listCouponPayments(issuerId, bond.createdAt) });
+    await planCouponSchedule(bond);
+    return NextResponse.json({ payments: await listCouponPayments(issuerId, bond.createdAt) });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
