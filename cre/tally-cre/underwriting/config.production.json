@@ -1,6 +1,6 @@
 {
   "schedule": "0 */5 * * * *",
-  "consoleBaseUrl": "REPLACE_WITH_DEPLOYED_CONSOLE_URL",
+  "consoleBaseUrl": "https://tally-eight-jet.vercel.app",
   "issuerId": "issuer-corrados-deli-f5bb20",
   "secretId": "REVENUE_API_TOKEN"
 }
