@@ -82,6 +82,41 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
   and the underwriting/bond-issuance flow, styled and wired to all of the
   above.
 
+## Running it
+
+```bash
+pnpm install                 # also builds the ATS browser-signer bundle
+cd apps/console && pnpm dev  # http://localhost:3000
+```
+
+A real `.env` at the repo root is required (see `.env.example`); the console
+loads it automatically.
+
+### Why this runs locally rather than on a serverless host
+
+Tally is deliberately not a serverless app, and deploying it to one would
+produce a broken demo rather than a better one:
+
+- **Bond issuance drives a real headless Chromium.** Hedera's Asset
+  Tokenization Studio SDK gates its write path behind real browser globals
+  (`Injectable.isWeb()`, `window.ethereum`), so `packages/ats-client` signs
+  through an actual Playwright-driven browser with a real wallet shim. That
+  cannot run inside a serverless function — no amount of migration changes
+  it.
+- **Settlement is a long-lived background sweep.** `instrumentation.ts`
+  arms coupons, confirms payments on the mirror node and anchors events on a
+  timer. Serverless has no long-lived process to run it.
+- **State is a local SQLite file.** Every business, bond and coupon row
+  lives in `apps/console/tally.db` on a writable filesystem.
+- **The write routes are deliberately local-only.** Anything that moves real
+  value is refused when the request arrives through a proxy unless it
+  presents `TALLY_ADMIN_TOKEN` — see `apps/console/lib/api-guard.ts`. A
+  platform edge proxy trips that by design.
+
+If a public URL is needed for a live walkthrough, tunnel the local app
+(`ngrok http 3000`). `/revenue` stays reachable for Chainlink's DON via its
+own bearer token, while the value-moving routes stay refused.
+
 ## Repository layout
 
 - `apps/console` — the Next.js product surface (business registration, revenue, Stripe Connect, bond issuance UI)
