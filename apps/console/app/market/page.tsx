@@ -3,6 +3,11 @@ import { computeBondId, listMarketOrders } from '@/lib/secondary-market';
 import MarketFillPanel from './MarketFillPanel';
 import PlaceBidPanel from './PlaceBidPanel';
 
+// Reads the live database, so it must not be prerendered at build time
+// (the build has no database access). The mirror-node reads behind the
+// order book stay cached for 30s at the fetch level either way.
+export const dynamic = 'force-dynamic';
+
 function formatMicrosUSD(microsStr: string): string {
   return (Number(BigInt(microsStr)) / 1_000_000).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 }
