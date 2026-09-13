@@ -1,127 +1,222 @@
 # Demo script
 
-A walkthrough of Tally's real, working flow — registration through
-settlement — for recording or live presentation. Every step below is real:
-real database, real Stripe OAuth (or disclosed synthetic data), real Hedera
-testnet transactions. Nothing in this script is simulated except where
-explicitly marked.
+The complete, step-by-step walkthrough of Tally, from registration to
+settlement. Every step lists what to do, what you should see, and **which
+automated test proves it**, so you can check the demo is true before showing
+it. For the recorded video's spoken narration, see
+[`VIDEO_SCRIPT.md`](VIDEO_SCRIPT.md).
 
-Run `pnpm --filter console dev` from the repo root and open `http://localhost:3000`.
+Disclosed exceptions, visible in the product itself:
 
-## 1. The pitch (30s, talking over the home page)
+- **Demo businesses use synthetic revenue**, labelled *"Synthetic demo data —
+  not a real business"* on every page that shows it. Everything downstream of
+  that revenue is real.
+- **The Chainlink confidential enclave isn't active yet** (Chainlink-side
+  provisioning). Workflow runs are real but not confidential.
+- **Redemption at maturity reverts on-chain.** It's not part of the demo.
+- **The Graph's register is empty today.** Settlement events are anchored on
+  Hedera; the subgraph indexes the Sepolia copy, which has none yet.
 
-> "A shop's real revenue becomes a short bond. Underwritten in private,
-> priced in public, settles itself."
+---
 
-Show the home page. One sentence on the three sponsors: Hedera issues and
-settles the bond, Chainlink privately underwrites it, The Graph makes every
-issuer's repayment history public and queryable.
+## 0. Preflight — run before every demo
 
-## 2. Register a business (30s)
-
-Click "Register your business", enter a name, submit. Point out: this
-creates a real row in the console's database and lands on that business's
-own page — no fixture, no seeded state.
-
-## 3. Show the revenue source (30s)
-
-On the business page: "Connect Stripe" starts a real Stripe Connect OAuth
-handshake — for a business with a real connected account, revenue below is
-a live pull from Stripe's `charges.list`, not manually entered.
-
-**For the recorded demo**, switch to `Corrado's Deli`
-(`issuer-corrados-deli-f5bb20`) instead — it carries the same real
-underwriting and issuance pipeline, but its revenue is clearly disclosed
-synthetic demo data (visible **"Synthetic demo data — not a real business"**
-badge on the page) rather than a real business's real multi-month sales
-history. Say this out loud on camera: "this business's revenue numbers are
-synthetic and disclosed as such — everything downstream of this number runs
-exactly the same as it would for a real connected Stripe account."
-
-## 4. Underwriting & bond issuance (60–90s, real wait)
-
-Click "Run underwriting & issue bond". Narrate while it runs (~15–30
-real seconds):
-
-1. The console computes a real trailing-90-day revenue snapshot and
-   volatility score from that business's actual transaction history.
-2. **[Live deploy]** That snapshot would normally be read by the Chainlink
-   CRE confidential workflow, inside a TEE, which applies the real pricing
-   policy and returns only a verdict. **[If CRE deploy access hasn't been
-   granted yet]** show `cre workflow simulate --target staging-settings
-   --non-interactive --trigger-index 0` running the identical real logic
-   locally instead, and say so plainly: "this is CRE's own simulator, not a
-   live TEE deploy — the underwriting logic is identical either way, we're
-   just waiting on Chainlink's private-beta access review to run it live."
-3. On approval, the console drives a real headless-browser signer that
-   issues a real fixed-rate bond through Hedera's Asset Tokenization Studio
-   Factory contract on testnet — a real `Bond.create` + `FixedRate.setRate`,
-   with the coupon rate frozen from the verdict.
-
-When it completes, point at the rendered result: real bond token ID, real
-EVM diamond address, real issuance transaction — each a live HashScan link.
-Click one open on camera.
-
-## 5. No-keeper settlement (pre-recorded segment)
-
-This can't be rehearsed live end-to-end in a short demo (a coupon/maturity
-schedule takes real wall-clock time to fire), so show a **pre-recorded,
-already-completed** example instead — narrate it as real, not staged:
-
-- A real coupon payment was armed as a Hedera `ScheduleCreateTransaction`
-  with `setWaitForExpiry(true)` and, with zero keeper or cron job running,
-  executed itself automatically at expiry.
-- Pull up that schedule on HashScan and the mirror node's consensus
-  timestamp for the resulting transfer, showing the on-time/late
-  determination is computed from that real timestamp, never hand-set.
-- Same pattern for redemption at maturity: role grants, control-list
-  addition, a real self-signed KYC verifiable credential, then
-  `Bond.fullRedeemAtMaturity` actually redeeming the bond.
-
-## 6. The public performance register (30s)
-
-Open the subgraph's Studio query playground
-(https://thegraph.com/studio/subgraph/tally-register) and paste this
-(verified live before recording — don't type it from memory on camera):
-
-```graphql
-{
-  lifecycleEvents(first: 10, orderBy: timestamp, orderDirection: desc) {
-    kind
-    timestamp
-    onTime
-    hcsTxId
-    bond { issuer }
-  }
-  issuerStandings {
-    id
-    bondsIssued
-    couponsOnTime
-    couponsLate
-  }
-}
+```bash
+cd apps/console
+pnpm test            # 21 unit tests (policy, schedules, database layer)
+pnpm dev             # leave running on http://localhost:3000
+pnpm test:api        # 20 API tests: validation, auth, signing guard
+pnpm test:ui         # 9 browser tests: pages, registration, underwriting
+pnpm test:proof      # 12 on-chain checks against public infrastructure
 ```
 
-Point out this is querying a real deployed subgraph indexing real anchored
-on-chain events (mirrored onto Sepolia for indexing — see
-`FEEDBACK/THEGRAPH.md` for why) — this is the "priced in public" half of the
-pitch: any future lender can see an issuer's real on-time repayment history
-before extending credit again.
+**Expect** every suite green, except `test:proof`'s *"the register contains
+indexed lifecycle events"* (see exceptions above). If anything else fails,
+don't claim that step on camera.
 
-## 7. Close (15s)
+To run the same API and UI suites against the hosted deployment:
+`TALLY_E2E_BASE_URL=https://tally-eight-jet.vercel.app pnpm test:api`.
 
-> "Every number on this screen is real — real revenue, real Hedera
-> transactions, real Scheduled Transaction settlement, real subgraph
-> queries. The one disclosed exception is Corrado's Deli's synthetic demo
-> revenue, and even that runs through the exact same real pipeline as a
-> live Stripe-connected business."
+**Prepare a business that can issue live.** Both existing demo businesses
+already hold an outstanding bond, and a business can't hold two:
 
-## Rehearsal notes
+```bash
+curl -s -X POST http://localhost:3000/api/business/register \
+  -H 'content-type: application/json' -d '{"name":"Harbor Coffee"}'
+npx tsx --env-file=.env.local scripts/seed-demo-business.ts <issuerId from above>
+```
 
-- Rehearse steps 1–4 live at least twice before recording — step 4's real
-  ~15–30s wait is the one place timing can surprise you on camera.
-- Have the pre-recorded segment (step 5) and subgraph query (step 6) cued up
-  and ready to switch to, rather than narrating the wait live.
-- Decide before recording whether CRE deploy access has come through — if
-  not, say so plainly on camera exactly once (per step 4) and move on; don't
-  over-apologize for it.
+---
+
+## 1. The pitch
+
+**Do:** open `http://localhost:3000/`.
+
+**Expect:** the headline *"A shop's verified revenue becomes a short bond"*,
+four live platform stats (businesses, bonds issued, face value, transactions),
+and the seven-step pipeline.
+
+**Verified by:** `test:ui` › *landing page › renders the hero, the coin video,
+and live platform stats*.
+
+---
+
+## 2. Register a business
+
+**Do:** click **Add a business**, enter a name, submit.
+
+**Expect:** you land on the new business's page. It shows *"No payment
+processor connected yet."* and **$0.00** revenue — nothing invented.
+
+**Verified by:** `test:ui` › *registration and underwriting › registers a real
+business…*; `test:api` › *business registration* (missing/blank names
+rejected, issuer id derived from the name, row really persisted).
+
+---
+
+## 3. Underwriting declines a business with no history
+
+**Do:** on that new business, click **Run underwriting & issue bond**.
+
+**Expect:** **DECLINED** — *"Fewer than 30 days of revenue history"*. Hedera
+issuance shows as *not reached*.
+
+**Verified by:** `test:ui` › *…declines it for insufficient history*.
+
+---
+
+## 4. Revenue from Stripe (or disclosed synthetic data)
+
+**Do:** open the business you prepared in step 0.
+
+**Expect:** the synthetic-data badge, about **$14,000** trailing 90-day
+revenue and 95 days of history. On a Stripe-connected business, **Connect
+Stripe** runs the real OAuth handshake instead, and revenue is pulled from
+Stripe on every read.
+
+**The policy** (`packages/underwriting/src/pricing.ts`): approve only with at
+least 30 days of history, at least $3,000 of 90-day revenue, and a volatility
+score of 40 or less. Coupon rate = 4.00% + 0.04% per volatility point above 10.
+
+**Verified by:** unit tests in `packages/underwriting` (11 tests);
+`test:api` › *manual transactions* (amounts stored as 6-decimal fixed point,
+never floats).
+
+---
+
+## 5. Issue a real bond on Hedera
+
+**Do:** click **Run underwriting & issue bond** on the prepared business.
+Wait 20–40 seconds.
+
+**Expect:** **APPROVED**, a coupon rate, **✓ Issued on Hedera testnet**, and
+HashScan links to the bond contract and issuance transaction.
+
+**How:** the server drives a real headless Chromium with the custodian key,
+because Hedera's Asset Tokenization Studio SDK only signs in a browser. It
+deploys the bond through the ATS factory, then mints the units.
+
+**Verified by:** `test:ui` › *an issued bond › shows real HashScan links*;
+`test:proof` › *Hedera: the bond is real* (deployed contract, `totalSupply` = 1).
+
+---
+
+## 6. Coupons pay themselves
+
+**Do:** open `http://localhost:3000/business/issuer-lifecycle-demo-co-c89705`
+and scroll to the coupon schedule. Open
+`https://hashscan.io/testnet/schedule/0.0.10519300`.
+
+**Expect:** three coupons, each with a Hedera schedule ID and ✓ on time. On
+HashScan, the schedule executed at its expiry.
+
+**How:** each coupon is a `ScheduleCreateTransaction` with
+`setWaitForExpiry(true)`. The network executes it at the due date — no keeper
+or cron. A background sweep then reads the mirror node's consensus timestamp
+and anchors an on-time/late event on the `SettlementAnchor` contract.
+
+**Verified by:** `test:proof` › *Hedera: coupons paid themselves* (all three
+schedules executed within 5 s of expiry, three 0.12809615 ℏ receipts at the
+separate bondholder account `0.0.10481844`, anchors on `0.0.10501789`);
+`test:api` › *the coupon schedule is persisted and every coupon was anchored
+on time*.
+
+---
+
+## 7. Secondary market with on-chain compliance
+
+**Do:** open `http://localhost:3000/market`.
+
+**Expect:** the order book, rebuilt from the `SecondaryMarket` contract's
+on-chain events.
+
+**How:** an account without KYC on the bond was refused by the ATS token
+itself with `transfer restricted: counterparty not compliant`; the custodian's
+fill succeeded. Details in `DEMO.md` §4.
+
+**Verified by:** `test:ui` › *secondary market*; `test:api` › *the market
+order book is served from on-chain logs*; `test:proof` › *the SecondaryMarket
+contract has real order events*.
+
+---
+
+## 8. Chainlink CRE runs the underwriting
+
+**Do:**
+
+```bash
+cd cre/tally-cre
+cre execution list tally-underwriting-staging
+cre execution logs <an execution id from the list>
+```
+
+**Expect:** `SUCCESS` every minute, and nine nodes each logging
+`Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460`.
+
+**How:** the workflow fetches the revenue snapshot with a bearer secret,
+applies the same policy, and reports only the verdict. 460 bps = 4.00% +
+(volatility 25 − 10) × 0.04%.
+
+**Verified by:** `test:api` › *revenue endpoint* (refuses missing and wrong
+tokens; returns exactly four aggregate fields and no transaction rows);
+`cre/tally-cre/underwriting/workflow.test.ts`.
+
+---
+
+## 9. Signing is protected
+
+**Do:** nothing to show on screen. Mention it if asked.
+
+**Expect:** any request to a value-moving route (issue, arm coupons, redeem,
+list, bid, fill) that arrives through a proxy is refused with `403`; the
+hosted deployment refuses them with `501`.
+
+**Verified by:** `test:api` › *signing guard* (7 tests, all using ids that
+don't exist, so a failure could never sign anything).
+
+---
+
+## 10. Verify everything independently
+
+**Do:** open `http://localhost:3000/proof`.
+
+**Expect:** every contract, account and endpoint with public explorer links
+across Hedera testnet, Ethereum Sepolia and The Graph.
+
+**Verified by:** `test:ui` › *verification page*; `test:proof` › *Sepolia:
+mirror deployment* and *the subgraph is deployed, synced and has no indexing
+errors*.
+
+---
+
+## Test totals
+
+| Suite | Command | Tests |
+|---|---|---|
+| Unit — seam, underwriting, scheduler | `pnpm test` (repo root) | 26 |
+| Unit — console, incl. real-database tests | `pnpm test` (apps/console) | 21 |
+| Contracts | `pnpm contracts:test` | 8 |
+| API contract | `pnpm test:api` | 20 |
+| Browser UI | `pnpm test:ui` | 9 |
+| Live on-chain proof | `pnpm test:proof` | 12 |
+| **Total** | | **96** |

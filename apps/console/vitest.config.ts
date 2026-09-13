@@ -1,4 +1,9 @@
+import { existsSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
+
+// Lets lib/db.test.ts reach the real database locally; in CI without a
+// .env.local those tests skip rather than run against anything fake.
+if (!process.env.DATABASE_URL && existsSync('.env.local')) process.loadEnvFile('.env.local');
 
 export default defineConfig({
   test: {

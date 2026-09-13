@@ -182,10 +182,16 @@ public explorer links. Nothing requires trusting this UI.
 ## 7. Tests
 
 ```bash
-cd contracts && forge test     # 8 passing
-cd apps/console && pnpm test   # 15 unit
-pnpm test:e2e                  # 9 end-to-end, against a real running app
+pnpm test                      # 26 unit (repo root: seam, underwriting, scheduler)
+cd contracts && forge test     # 8 contract tests
+cd apps/console && pnpm test   # 21 unit, incl. real-database tests
+pnpm test:api                  # 20 API tests: validation, auth, signing guard
+pnpm test:ui                   # 9 browser tests against the running app
+pnpm test:proof                # 12 live checks of every on-chain claim above
 ```
+
+96 tests in total. Step-by-step mapping of demo claims to tests:
+`docs/DEMO_SCRIPT.md`. Video narration: `docs/VIDEO_SCRIPT.md`.
 
 ---
 

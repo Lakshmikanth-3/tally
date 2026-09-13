@@ -1,29 +1,5 @@
-import { existsSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-
-// The test runner doesn't go through Next's env loading, so DATABASE_URL
-// has to be read from the same .env.local the app uses.
-if (!process.env.DATABASE_URL && existsSync('.env.local')) process.loadEnvFile('.env.local');
-
-const E2E_NAME_PREFIX = 'E2E Test Shop ';
-
-/// Registration writes to the same real Postgres database the app uses —
-/// there is no separate test database, by design (this repo doesn't mock
-/// its own storage). So the suite removes exactly the rows it created and
-/// nothing else, rather than leaving test businesses in the dashboard.
-async function purgeE2EBusinesses(): Promise<number> {
-  const { withTransaction } = await import('../lib/db');
-  return withTransaction(async (tx) => {
-    const rows = await tx.all<{ issuer_id: string }>('SELECT issuer_id FROM businesses WHERE name LIKE ?', `${E2E_NAME_PREFIX}%`);
-    for (const row of rows) {
-      await tx.run('DELETE FROM coupon_payments WHERE issuer_id = ?', row.issuer_id);
-      await tx.run('DELETE FROM bonds WHERE issuer_id = ?', row.issuer_id);
-      await tx.run('DELETE FROM transactions WHERE issuer_id = ?', row.issuer_id);
-      await tx.run('DELETE FROM businesses WHERE issuer_id = ?', row.issuer_id);
-    }
-    return rows.length;
-  });
-}
+import { purgeE2EBusinesses } from './support';
 
 test.afterAll(async () => {
   const removed = await purgeE2EBusinesses();

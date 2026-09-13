@@ -38,7 +38,7 @@ This is the page to show a judge who doesn't trust the UI.
 
 **Verify independently:** click *SettlementAnchor* under Hedera testnet. HashScan should load contract `0.0.10501789` and show real transactions against it. Do the same for the Sepolia rows on Etherscan.
 
-**Why two networks:** the Hedera deployment is the real product; the Sepolia copy exists only because Subgraph Studio can't index Hedera. Same deterministic addresses, deliberately.
+**Why two networks:** the Hedera deployment is the real product; the Sepolia copy exists only because Subgraph Studio can't index Hedera.
 
 ---
 
@@ -115,7 +115,7 @@ Open the [Studio playground](https://thegraph.com/studio/subgraph/tally-register
 }
 ```
 
-**Expected:** real indexed events and an `IssuerStanding` rollup — the public repayment register.
+**Expected today:** the query succeeds with no indexing errors, but both lists are **empty**. Settlement events are anchored on the Hedera `SettlementAnchor`, while the subgraph indexes the Sepolia copy, where nothing has been anchored yet. `pnpm test:proof` tracks this (*the register contains indexed lifecycle events*). Once events are anchored on Sepolia, this shows them and an `IssuerStanding` rollup.
 
 ---
 
@@ -258,13 +258,19 @@ it has no key and no browser there.
 ```bash
 # Everything at once, from the repo root
 pnpm typecheck        # all 6 packages
-pnpm test             # 41 unit tests across seam / underwriting / scheduler / console
+pnpm test             # 47 unit tests across seam / underwriting / scheduler / console
 pnpm contracts:test   # 8 Foundry tests, including a 256-run fuzz
 
-# End-to-end — drives the real UI and real API routes in a real browser
-cd apps/console && npx playwright test   # 9 tests
+# Against the real running app (starts `next dev` on :3000 if none is running)
+cd apps/console
+pnpm test:api         # 20 API contract tests — validation, auth, signing guard
+pnpm test:ui          # 9 browser tests — real UI, real routes
+pnpm test:proof       # 12 live checks of on-chain claims (Hedera, Sepolia, The Graph)
+
+# Same API/UI suites against the hosted deployment
+TALLY_E2E_BASE_URL=https://tally-eight-jet.vercel.app pnpm test:api
 ```
 
 The e2e suite registers a real business, asserts it's honestly declined, checks the explorer links, and **deletes exactly the rows it created** afterwards so the dashboard isn't polluted.
 
-**Totals: 41 unit + 8 contract + 9 e2e = 58 tests.**
+**Totals: 47 unit + 8 contract + 20 API + 9 UI + 12 live-proof = 96 tests.**

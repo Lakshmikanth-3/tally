@@ -128,7 +128,7 @@ function ensureSchema(): Promise<void> {
 /// Every query in this app is written with SQLite-style `?` placeholders;
 /// this rewrites them to Postgres's positional `$1, $2, …`. None of the SQL
 /// here ever contains a literal `?` inside a string, so a plain scan is safe.
-function toPositional(sql: string): string {
+export function toPositional(sql: string): string {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
 }

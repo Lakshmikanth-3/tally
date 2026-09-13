@@ -9,7 +9,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:api": "playwright test e2e/api.spec.ts",
+    "test:proof": "playwright test e2e/live-proof.spec.ts",
+    "test:ui": "playwright test e2e/flow.spec.ts"
   },
   "dependencies": {
     "@tally/ats-client": "workspace:*",
