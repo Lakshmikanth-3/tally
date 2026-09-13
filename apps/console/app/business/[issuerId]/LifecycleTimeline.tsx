@@ -32,9 +32,12 @@ export default async function LifecycleTimeline({ bondId }: { bondId: string }) 
       {loadError && <p role="alert">Could not reach the subgraph: {loadError}</p>}
       {!loadError && events.length === 0 && (
         <p style={{ fontSize: '0.87rem' }}>
-          No lifecycle events anchored for this bond yet. Coupon and redemption anchoring is armed separately, on a real
-          Hedera Scheduled Transaction (<code>packages/scheduler</code>) — issuance alone doesn&apos;t create one. See{' '}
-          <a href="/register-lookup">the full repayment register</a> for events already anchored on other bonds.
+          Nothing indexed for this bond yet — which does <strong>not</strong> mean nothing was anchored. This timeline
+          reads the subgraph, and the subgraph indexes the <em>Sepolia</em> copy of <code>SettlementAnchor</code>,
+          because Subgraph Studio can&apos;t index Hedera (see <code>FEEDBACK/THEGRAPH.md</code>). Real settlement
+          anchors written to the Hedera deployment — the ones the coupon schedule above links — therefore never show up
+          here. Check the coupon schedule for this bond&apos;s real anchored payments, or{' '}
+          <a href="/register-lookup">the repayment register</a> for what the subgraph has actually indexed.
         </p>
       )}
       {!loadError && events.length > 0 && (

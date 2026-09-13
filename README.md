@@ -20,20 +20,41 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
 
 ## Real infrastructure, live and verified
 
-- **Bond issuance and redemption** — both run through a real headless-browser
-  signer against the real Asset Tokenization Studio Factory contract on
-  Hedera testnet. Verified live end-to-end: a bond is created (`Bond.create`
-  + `FixedRate.setRate`), its required roles (rate-manager, control-list,
-  maturity-redeemer) are granted, and — at maturity — a real self-signed
-  verifiable credential grants internal KYC and `Bond.fullRedeemAtMaturity`
-  actually redeems it. This is real signing, real access-control gates, and
-  real on-chain transactions, not a simulated mechanism.
-- **No-keeper settlement** — coupon payments and redemption anchoring are
-  armed as real Hedera `ScheduleCreateTransaction`s with
-  `setWaitForExpiry(true)`. Verified live: an armed schedule executes itself
-  at expiry with zero bot/cron infrastructure, and the resulting on-time/late
+- **Bond issuance** — runs through a real headless-browser signer against the
+  real Asset Tokenization Studio Factory contract on Hedera testnet.
+  Verified live end-to-end: a bond is created (`Bond.create` +
+  `FixedRate.setRate`), its required roles (rate-manager, control-list,
+  issuer, maturity-redeemer) are granted, a real self-signed verifiable
+  credential grants internal KYC, and the bond's units are actually minted
+  to the treasury (`Security.issue`). Real signing, real access-control
+  gates, real on-chain transactions — not a simulated mechanism.
+- **No-keeper coupon payments** — each coupon is armed as a real Hedera
+  `ScheduleCreateTransaction` with `setWaitForExpiry(true)`. Verified live
+  on a real 3-coupon bond (`0.0.10519251`): all three executed themselves at
+  exactly their due timestamps with zero bot/cron infrastructure, paying
+  real HBAR to a real, separately-funded bondholder account. On-time/late
   status is derived from the mirror node's real consensus timestamps, never
-  hand-set.
+  hand-set. Because Hedera refuses a schedule expiring more than ~60 days
+  out, coupons are armed progressively as each due date comes into range.
+- **Automatic settlement and anchoring** — a background sweep
+  (`apps/console/instrumentation.ts`) arms due coupons, confirms each
+  payment actually executed via the mirror node, and only then anchors a
+  real `Coupon` lifecycle event. Verified live and unattended: all three
+  coupons on `0.0.10519251` were anchored to the real `SettlementAnchor`
+  (`0.0.10501789`) as successful `CONTRACTCALL`s and recorded on-time —
+  the full chain of issue → mint → arm → self-execute → confirm → anchor,
+  with no human in the loop.
+- **Redemption — known issue, not working.** The call path is implemented and
+  reaches the real contract, but `Bond.fullRedeemAtMaturity` reverts with
+  empty revert data on a genuinely matured bond, even with every
+  precondition on the contract's own modifier list confirmed satisfied
+  on-chain (maturity reached, redeemer role, KYC granted, whitelisted, units
+  held). It is not out of gas, and the identical calldata simulates fine via
+  `eth_call`. One real bug was found and fixed along the way — the SDK
+  resolves a `0.0.x` id to the account's long-zero EVM form, which is
+  neither whitelisted nor the token holder — but a second empty revert
+  remains. Everything ruled out is written up in
+  `packages/ats-client/src/redeem.ts`.
 - **On-chain infra** — `SettlementAnchor` + `SecondaryMarket` (Foundry, 8
   passing tests) deployed to both Hedera testnet (`0.0.10501789` /
   `0.0.10501801`, the real product deployment) and Ethereum Sepolia — the
@@ -41,12 +62,19 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
   as an indexable network (see `FEEDBACK/THEGRAPH.md`).
 - **Subgraph** — deployed live: https://thegraph.com/studio/subgraph/tally-register,
   indexing lifecycle events from the Sepolia deployment above.
-- **Chainlink CRE confidential workflow** (`cre/tally-cre`) — fetches a
-  business's real revenue from the console's API inside a TEE, applies real
-  underwriting logic, and returns only the verdict. Verified via
-  `cre workflow simulate`; live deployment is pending Chainlink's
-  Confidential Workflows private-beta access review (see
-  `FEEDBACK/CHAINLINK.md`).
+- **Chainlink CRE workflow** (`cre/tally-cre`) — **deployed live and
+  executing** on Chainlink's real DON as `tally-underwriting-staging`. It
+  fetches a business's real revenue from the console's API, applies the real
+  underwriting policy, and reports only the verdict. Verified from both
+  sides: Chainlink's nodes hit the revenue endpoint (`User-Agent:
+  Go-http-client/1.1`) and got real revenue data back, and the execution
+  reported SUCCESS with real consensus and a signed report.
+  **Caveat, stated plainly:** the TEE enclave itself is not running. Even on
+  a SUCCESS execution the `confidential-workflows` capability fails with
+  `cannot validate enclave config: DON members not set` — Chainlink-side
+  provisioning for the private registry's DON family. So the run is real,
+  but it is *not* confidential, and shouldn't be described as such until
+  that clears. See `cre/tally-cre/README.md` and `FEEDBACK/CHAINLINK.md`.
 - **Console UI** — Next.js app for business registration, Stripe Connect,
   and the underwriting/bond-issuance flow, styled and wired to all of the
   above.

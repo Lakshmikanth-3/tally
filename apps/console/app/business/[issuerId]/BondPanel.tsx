@@ -184,7 +184,10 @@ export default function BondPanel({ issuerId }: { issuerId: string }) {
 
       {bond && bond.status === 'failed' && !issuing && (
         <>
-          <p role="alert">Issuance failed: {bond.errorMessage}</p>
+          {/* Same unbreakable-RPC-blob problem as UnderwritingHistory's. */}
+          <p role="alert" style={{ overflowWrap: 'anywhere' }}>
+            Issuance failed: {bond.errorMessage}
+          </p>
           <button className="secondary" onClick={handleIssue} style={{ marginTop: 14 }}>
             Retry issuance
           </button>

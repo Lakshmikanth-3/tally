@@ -36,12 +36,22 @@ export default function UnderwritingHistory({ issuerId }: { issuerId: string }) 
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 10 }}>
         {runs.map((run) => (
-          <div key={`${run.issuerId}-${run.createdAt}`} className="run-step done">
+          <div
+            key={`${run.issuerId}-${run.createdAt}`}
+            className="run-step done"
+            // A failed run's real error can be an enormous single-token JSON
+            // blob from the RPC relay, with nothing for the browser to break
+            // on — left unwrapped it stretched this page to ~34,000px wide.
+            style={{ flexWrap: 'wrap', minWidth: 0 }}
+          >
             <span className={STATUS_BADGE[run.status] ?? 'badge'}>{run.status.toUpperCase()}</span>
             <span style={{ marginLeft: 10 }}>{formatDate(run.createdAt)}</span>
-            <span style={{ marginLeft: 10, color: 'var(--text-dim)' }}>
+            <span
+              style={{ marginLeft: 10, color: 'var(--text-dim)', minWidth: 0, overflowWrap: 'anywhere' }}
+              title={run.status === 'failed' && run.errorMessage ? run.errorMessage : undefined}
+            >
               {run.status === 'failed' && run.errorMessage
-                ? run.errorMessage
+                ? summarizeError(run.errorMessage)
                 : (REASON_LABELS[run.reasonCode as UnderwritingReasonCode] ?? `reason code ${run.reasonCode}`)}
             </span>
             {run.status === 'issued' && run.couponBps !== null && (
@@ -52,4 +62,15 @@ export default function UnderwritingHistory({ issuerId }: { issuerId: string }) 
       </div>
     </section>
   );
+}
+
+/// A real RPC failure can carry kilobytes of encoded calldata, which
+/// rendered in full drowns out every other run on the page. Truncated for
+/// display only — the untruncated message stays on the element's title, and
+/// is never rewritten or prettified into something it didn't actually say.
+const ERROR_PREVIEW_CHARS = 240;
+
+function summarizeError(message: string): string {
+  const collapsed = message.replace(/\s+/g, ' ').trim();
+  return collapsed.length <= ERROR_PREVIEW_CHARS ? collapsed : `${collapsed.slice(0, ERROR_PREVIEW_CHARS)}… (hover for full error)`;
 }
