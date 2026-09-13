@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { IS_READ_ONLY } from './db';
 
 /// Constant-time string comparison. Hashing first means both sides are the
 /// same fixed length, so timingSafeEqual can't throw on a length mismatch
@@ -68,6 +69,20 @@ function isLocalRequest(req: NextRequest): boolean {
 /// real users, every one of these routes would need genuine per-user auth
 /// instead — this would not be sufficient.
 export function requireTrustedCaller(req: NextRequest): NextResponse | null {
+  // The hosted showcase is a read-only snapshot on a read-only filesystem,
+  // and has neither the custodian key nor the headless browser that real
+  // signing needs. Refusing here gives an honest, specific reason instead
+  // of letting the request fail somewhere deeper and look like a bug.
+  if (IS_READ_ONLY) {
+    return NextResponse.json(
+      {
+        error:
+          'This is the read-only hosted showcase. Actions that move real value — issuing a bond, arming coupon payments, escrowing units, filling an order — sign with a real custodian key through a real headless browser, so they only run against the local app. See DEMO.md.',
+      },
+      { status: 501 },
+    );
+  }
+
   const adminToken = process.env.TALLY_ADMIN_TOKEN;
   const presented = bearerToken(req);
   if (adminToken && presented && secretsMatch(presented, adminToken)) {

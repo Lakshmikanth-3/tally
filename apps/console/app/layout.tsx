@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Pixelify_Sans } from 'next/font/google';
 import './globals.css';
 import Nav from './Nav';
+import { IS_READ_ONLY } from '@/lib/db';
 import VideoBackground from './VideoBackground';
 
 // Geist carries the whole interface; Pixelify is used sparingly as a
@@ -22,6 +23,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <VideoBackground />
         <Nav />
+        {IS_READ_ONLY && (
+          <div
+            style={{
+              background: 'var(--danger-soft)',
+              borderBottom: '1px solid rgba(244, 115, 107, 0.28)',
+              color: 'var(--text)',
+              padding: '10px 20px',
+              fontSize: '0.84rem',
+              textAlign: 'center',
+            }}
+          >
+            <strong>Read-only showcase.</strong> Every figure and link below is real on-chain data from a live snapshot.
+            Actions that move value (issuing a bond, arming coupons, filling an order) sign with a real custodian key
+            through a real headless browser, so they run only against the local app — see <code>DEMO.md</code>.
+          </div>
+        )}
         {children}
         <footer className="site-footer">
           <p>Tally — built for ETHOnline 2026 · Hedera · Chainlink · The Graph</p>

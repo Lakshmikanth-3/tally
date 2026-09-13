@@ -1,12 +1,24 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 
-const DB_PATH = path.join(process.cwd(), 'tally.db');
+/// The hosted showcase runs against a committed, credential-scrubbed
+/// snapshot (`showcase.db`) on a read-only filesystem, where WAL mode and
+/// the schema migrations below would all fail — every one of them writes.
+/// Locally nothing changes: the real `tally.db` is opened read-write as
+/// before.
+export const IS_READ_ONLY = process.env.TALLY_READ_ONLY === '1' || Boolean(process.env.VERCEL);
+
+const DB_PATH = path.join(process.cwd(), IS_READ_ONLY ? 'showcase.db' : 'tally.db');
 
 let db: Database.Database | undefined;
 
 export function getDb(): Database.Database {
   if (db) return db;
+
+  if (IS_READ_ONLY) {
+    db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+    return db;
+  }
 
   db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');

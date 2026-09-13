@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
   // Pushing the same names onto webpack's own `externals` is the fix that
   // actually took effect.
   serverExternalPackages: ['better-sqlite3', 'playwright', 'playwright-core'],
+  // The hosted showcase reads a committed SQLite snapshot. Nothing imports
+  // it, so Next's file tracing can't infer it — without this the deployed
+  // function has no database at all.
+  outputFileTracingIncludes: { '/**': ['./showcase.db'] },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = [...(config.externals ?? []), 'playwright', 'playwright-core'];

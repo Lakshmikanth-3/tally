@@ -1,4 +1,5 @@
 import { runDueLifecycleActions } from './lifecycle';
+import { IS_READ_ONLY } from './db';
 
 const POLL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes — coarse-grained on purpose: each sweep can open a real headless-browser session per bond needing redemption
 
@@ -28,6 +29,10 @@ async function poll(): Promise<void> {
 /// same real custodian account.
 export function startLifecyclePoller(): void {
   if (started) return;
+  // The hosted showcase has no custodian key and no headless browser, and
+  // its database is read-only — a sweep there would launch browsers and
+  // attempt real signing on every cold start, and fail on every write.
+  if (IS_READ_ONLY) return;
   started = true;
   setInterval(() => void poll(), POLL_INTERVAL_MS);
   // Also run once shortly after startup, not the first time only 10
