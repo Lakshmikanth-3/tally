@@ -3,8 +3,9 @@ import { ethers } from 'ethers';
 import { ATS_TESTNET, type RedeemBondParams } from '@tally/ats-client';
 import { startBrowserSignerSession } from '@tally/ats-client/browser-runner/runner';
 import { buildHederaClient, anchorNow, EventKind, isSettlementOnTime } from '@tally/scheduler';
-import { getLatestBond, getCustodian, markBondRedeemed } from './bonds';
+import { getLatestIssuedBond, getCustodian, markBondRedeemed } from './bonds';
 import { computeBondId } from './secondary-market';
+import { withCustodianLock } from './custodian-lock';
 
 const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10501789'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
@@ -46,8 +47,12 @@ export interface RedeemBondResult {
 /// console can't run a plain Node import of the ATS SDK's write path (see
 /// packages/ats-client/src/init.ts's doc comment on Injectable.isWeb()).
 export async function redeemBondForBusiness(issuerId: string): Promise<RedeemBondResult> {
-  const bond = getLatestBond(issuerId);
-  if (!bond || bond.status !== 'issued' || !bond.bondTokenId || !bond.evmDiamondAddress || !bond.maturityDateSeconds) {
+  return withCustodianLock(() => redeemBondForBusinessUnlocked(issuerId));
+}
+
+async function redeemBondForBusinessUnlocked(issuerId: string): Promise<RedeemBondResult> {
+  const bond = getLatestIssuedBond(issuerId);
+  if (!bond || !bond.bondTokenId || !bond.evmDiamondAddress || !bond.maturityDateSeconds) {
     throw new Error(`business ${issuerId} has no issued bond to redeem`);
   }
   if (bond.redeemedAt) {

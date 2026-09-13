@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTrustedCaller } from '@/lib/api-guard';
 import { getBusiness } from '@/lib/business';
 import { issueBondForBusiness } from '@/lib/bonds';
 
@@ -12,6 +13,9 @@ export const maxDuration = 60;
 /// through a real headless-browser signer — expect ~15-30 real seconds,
 /// not an instant response.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
+  const refusal = requireTrustedCaller(req);
+  if (refusal) return refusal;
+
   const { issuerId } = await params;
   const business = getBusiness(issuerId);
   if (!business) {

@@ -4,6 +4,7 @@ import { getCustodian, listAllIssuedBonds } from './bonds';
 import { armCouponForBond, listCouponPayments, markCouponPaymentAnchored } from './coupon-schedule';
 import { redeemBondForBusiness } from './redemption';
 import { computeBondId } from './secondary-market';
+import { withCustodianLock } from './custodian-lock';
 
 const SETTLEMENT_ANCHOR_HEDERA_ID = '0.0.10501789'; // real deployed anchor — see lib/explorer.ts's PROOF_ENTRIES
 
@@ -21,6 +22,13 @@ export interface LifecycleRunSummary {
 /// Each step is independently idempotent (checked against the bond's own
 /// real persisted state before acting), so calling this repeatedly is safe
 /// — see instrumentation.ts for what actually calls it on a schedule.
+///
+/// Deliberately does NOT take the custodian lock around the whole sweep:
+/// the operations it calls take that lock themselves, so wrapping the sweep
+/// too would deadlock — the outer hold would never release while the inner
+/// calls queued behind it. Per-operation locking is also what's wanted, so
+/// a user's action can interleave between a sweep's steps instead of
+/// waiting out the entire sweep.
 export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
   const summary: LifecycleRunSummary = { armedCoupons: [], anchoredCoupons: [], redeemedBonds: [], errors: [] };
   const bonds = listAllIssuedBonds();
@@ -55,11 +63,18 @@ export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
       (c) => c.scheduleId !== null && c.anchoredAt === null && c.dueDateSeconds <= nowSeconds,
     );
     if (duePayments.length > 0) {
+      // Captured before the closure below: the null checks at the top of
+      // this loop don't narrow through it, since it runs once the lock frees.
+      const evmDiamondAddress = bond.evmDiamondAddress;
+      const bondTokenId = bond.bondTokenId;
       try {
+        // anchorNow signs with the custodian key too, so it shares the same
+        // queue as every other custodian write (see custodian-lock.ts).
+        await withCustodianLock(async () => {
         const custodian = getCustodian();
         const client = buildHederaClient({ accountId: custodian.accountId, privateKeyHex: custodian.privateKeyHex });
         try {
-          const bondIdHex = computeBondId(bond.evmDiamondAddress, bond.bondTokenId);
+          const bondIdHex = computeBondId(evmDiamondAddress, bondTokenId);
           for (const coupon of duePayments) {
             const outcome = await settleCouponAndAnchor(client, {
               settlementAnchorContractId: SETTLEMENT_ANCHOR_HEDERA_ID,
@@ -81,6 +96,7 @@ export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
         } finally {
           client.close();
         }
+        });
       } catch (err) {
         summary.errors.push({ issuerId: bond.issuerId, step: 'anchor-coupon', message: (err as Error).message });
       }

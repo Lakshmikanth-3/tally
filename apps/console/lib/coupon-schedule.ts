@@ -1,6 +1,7 @@
 import { armCouponPayment, buildHederaClient } from '@tally/scheduler';
 import { getDb } from './db';
-import { getLatestBond, type BondRecord } from './bonds';
+import { getLatestIssuedBond, type BondRecord } from './bonds';
+import { withCustodianLock } from './custodian-lock';
 
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
 const SECONDS_PER_YEAR = 365 * 86_400;
@@ -145,8 +146,12 @@ export interface ArmedCouponResult {
 /// if that second account was never configured, so this still works
 /// before it exists.
 export async function armCouponForBond(issuerId: string): Promise<ArmedCouponResult[]> {
-  const bond = getLatestBond(issuerId);
-  if (!bond || bond.status !== 'issued' || !bond.startingDateSeconds || !bond.maturityDateSeconds || !bond.couponBps || !bond.faceValueUsd) {
+  return withCustodianLock(() => armCouponForBondUnlocked(issuerId));
+}
+
+async function armCouponForBondUnlocked(issuerId: string): Promise<ArmedCouponResult[]> {
+  const bond = getLatestIssuedBond(issuerId);
+  if (!bond || !bond.startingDateSeconds || !bond.maturityDateSeconds || !bond.couponBps || !bond.faceValueUsd) {
     throw new Error(`business ${issuerId} has no issued bond to arm a coupon for`);
   }
 

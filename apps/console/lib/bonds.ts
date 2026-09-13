@@ -197,6 +197,22 @@ export function findBondByEvmDiamondAddress(evmDiamondAddress: string): BondReco
   return row ? rowToBondRecord(row) : null;
 }
 
+/// This issuer's most recent bond that was actually *issued*, ignoring any
+/// later declined or failed underwriting run.
+///
+/// getLatestBond returns the newest row of any status, which is right for
+/// the UI and for the re-run cooldown but wrong for anything acting on a
+/// live instrument: a declined run recorded after a bond was issued would
+/// shadow it, and coupon arming, settlement and redemption would all start
+/// reporting "no issued bond" for a bond that plainly exists — silently
+/// stranding its coupons and leaving it unredeemable.
+export function getLatestIssuedBond(issuerId: string): BondRecord | null {
+  const row = getDb()
+    .prepare("SELECT * FROM bonds WHERE issuer_id = ? AND status = 'issued' ORDER BY created_at DESC LIMIT 1")
+    .get(issuerId) as BondRow | undefined;
+  return row ? rowToBondRecord(row) : null;
+}
+
 /// Every real underwriting run for this issuer, newest first — the bonds
 /// table is insert-only per run (declined/issued/failed), so this is
 /// already a true history, not a derived or reconstructed one.

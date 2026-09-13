@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTrustedCaller } from '@/lib/api-guard';
 import { depositBondForResale, findBondByEvmDiamondAddress } from '@/lib/bonds';
 import { fillMarketOrder, getOrder } from '@/lib/secondary-market';
 
@@ -20,6 +21,9 @@ import { fillMarketOrder, getOrder } from '@/lib/secondary-market';
 /// *filler's* identity, which is meaningless here since a bid's compliance
 /// gate checks the maker, not the filler, so it's ignored for a bid.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
+  const refusal = requireTrustedCaller(req);
+  if (refusal) return refusal;
+
   const { orderId } = await params;
   const body = await req.json().catch(() => ({}));
   const takerPrivateKeyHex: string | undefined = body?.takerPrivateKeyHex || undefined;

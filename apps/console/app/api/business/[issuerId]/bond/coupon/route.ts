@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLatestBond } from '@/lib/bonds';
+import { requireTrustedCaller } from '@/lib/api-guard';
+import { getLatestIssuedBond } from '@/lib/bonds';
 import { armCouponForBond, listCouponPayments, planCouponSchedule } from '@/lib/coupon-schedule';
 
 /// This bond's real coupon schedule — every payment it owes, with whichever
@@ -7,8 +8,8 @@ import { armCouponForBond, listCouponPayments, planCouponSchedule } from '@/lib/
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
   try {
-    const bond = getLatestBond(issuerId);
-    if (!bond || bond.status !== 'issued' || !bond.startingDateSeconds || !bond.maturityDateSeconds) {
+    const bond = getLatestIssuedBond(issuerId);
+    if (!bond || !bond.startingDateSeconds || !bond.maturityDateSeconds) {
       return NextResponse.json({ payments: [] });
     }
     // Planning is idempotent and pure bookkeeping (no chain calls), so a
@@ -23,7 +24,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ iss
 
 /// Arms every coupon that has come inside Hedera's real ~60-day scheduling
 /// window — see lib/coupon-schedule.ts.
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
+  const refusal = requireTrustedCaller(req);
+  if (refusal) return refusal;
+
   const { issuerId } = await params;
   try {
     const armed = await armCouponForBond(issuerId);

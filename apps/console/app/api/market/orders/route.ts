@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTrustedCaller } from '@/lib/api-guard';
 import { listMarketOrders, placeMarketOrder } from '@/lib/secondary-market';
 
 /// Real order book, read directly from on-chain event logs on every
@@ -20,6 +21,9 @@ export async function GET() {
 /// key for now, same as every other real on-chain action this console
 /// takes on a user's behalf.
 export async function POST(req: NextRequest) {
+  const refusal = requireTrustedCaller(req);
+  if (refusal) return refusal;
+
   const body = await req.json().catch(() => ({}));
   const bondId = typeof body?.bondId === 'string' ? body.bondId : null;
   const bondToken = typeof body?.bondToken === 'string' ? body.bondToken : null;

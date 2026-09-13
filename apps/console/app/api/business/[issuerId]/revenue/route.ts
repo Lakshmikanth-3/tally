@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { bearerToken, secretsMatch } from '@/lib/api-guard';
 import { getBusiness, getRevenueSnapshot } from '@/lib/business';
 
 /// Read by the Chainlink CRE confidential workflow, from inside the TEE,
@@ -12,9 +13,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ issu
     return NextResponse.json({ error: 'server misconfigured: REVENUE_API_TOKEN is not set' }, { status: 500 });
   }
 
-  const authHeader = req.headers.get('authorization') ?? '';
-  const presentedToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
-  if (presentedToken !== expectedToken) {
+  // Compared in constant time: a plain !== leaks how long a shared prefix
+  // of the real token a guess got right, and this endpoint is deliberately
+  // reachable from outside (Chainlink's DON calls it through a public URL),
+  // so it's exactly the kind of secret worth not leaking a byte at a time.
+  const presentedToken = bearerToken(req);
+  if (!presentedToken || !secretsMatch(presentedToken, expectedToken)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 

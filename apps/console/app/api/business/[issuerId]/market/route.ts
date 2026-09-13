@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTrustedCaller } from '@/lib/api-guard';
 import { getBusiness } from '@/lib/business';
-import { depositBondForResale, getLatestBond } from '@/lib/bonds';
+import { depositBondForResale, getLatestIssuedBond } from '@/lib/bonds';
 import { computeBondId, placeMarketOrder } from '@/lib/secondary-market';
 
 /// Places a real ask (or bid) for this business's issued bond, signed by
@@ -11,14 +12,17 @@ import { computeBondId, placeMarketOrder } from '@/lib/secondary-market';
 /// that can never actually fill (see ats-client's deposit.ts), so this
 /// route treats "list" as including escrow, not a two-step UI flow.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
+  const refusal = requireTrustedCaller(req);
+  if (refusal) return refusal;
+
   const { issuerId } = await params;
   const business = getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
-  const bond = getLatestBond(issuerId);
-  if (!bond || bond.status !== 'issued' || !bond.evmDiamondAddress || !bond.bondTokenId) {
+  const bond = getLatestIssuedBond(issuerId);
+  if (!bond || !bond.evmDiamondAddress || !bond.bondTokenId) {
     return NextResponse.json({ error: `business ${issuerId} has no issued bond to list` }, { status: 400 });
   }
 
