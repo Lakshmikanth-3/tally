@@ -13,7 +13,9 @@ interface ExchangeRateResponse {
 /// Hedera's own real, live network exchange rate — not a fabricated or
 /// hardcoded conversion. cent_equivalent cents == hbar_equivalent HBAR.
 async function fetchHbarPerUsd(): Promise<number> {
-  const res = await fetch(`${MIRROR_NODE_URL}/network/exchangerate`);
+  // Hedera publishes this rate in fixed periods (it changes on the order of
+  // hours, not seconds), so a 5-minute cache costs no accuracy.
+  const res = await fetch(`${MIRROR_NODE_URL}/network/exchangerate`, { next: { revalidate: 300 } });
   if (!res.ok) throw new Error(`mirror node exchange rate request failed: ${res.status} ${await res.text()}`);
   const body = (await res.json()) as ExchangeRateResponse;
   const { cent_equivalent: cents, hbar_equivalent: hbar } = body.current_rate;

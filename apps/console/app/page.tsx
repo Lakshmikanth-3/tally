@@ -1,6 +1,10 @@
 import { Fragment } from 'react';
 import { getPlatformStats } from '@/lib/business';
 import CountUp from './CountUp';
+
+// Reads live SQLite state; without this `next build` prerenders the stats
+// once and they never move again after a bond is issued.
+export const dynamic = 'force-dynamic';
 import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from './Icons';
 
 const PIPELINE = [

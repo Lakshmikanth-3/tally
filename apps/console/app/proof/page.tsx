@@ -1,6 +1,9 @@
 import { getDb } from '@/lib/db';
 import { PROOF_ENTRIES, hashscanToken, hashscanTransaction, SUBGRAPH_QUERY_URL } from '@/lib/explorer';
 
+// Reads live SQLite state; must not be prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 interface IssuedBondRow {
   issuer_id: string;
   bond_token_id: string;

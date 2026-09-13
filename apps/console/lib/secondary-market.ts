@@ -82,7 +82,12 @@ async function fetchAllContractLogs(): Promise<MirrorNodeLog[]> {
   const logs: MirrorNodeLog[] = [];
   let url: string | null = `${MIRROR_NODE_URL}/contracts/${SECONDARY_MARKET_HEDERA_ID}/results/logs?limit=100&order=asc`;
   while (url) {
-    const res = await fetch(url);
+    // Every page of this replay is cached for 30s. Uncached, /market
+    // re-walked the contract's entire log history from genesis on each
+    // render — measured at over 120s once the book had grown. The book is
+    // still reconstructed from real on-chain logs, never a local cache of
+    // orders; this caches the HTTP reads, not the derived state.
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) throw new Error(`mirror node logs request failed: ${res.status} ${await res.text()}`);
     const body = (await res.json()) as { logs: MirrorNodeLog[]; links: { next: string | null } };
     logs.push(...body.logs);

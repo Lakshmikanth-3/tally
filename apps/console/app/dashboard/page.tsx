@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { getPlatformStats, listAllBusinesses } from '@/lib/business';
 import CountUp from '../CountUp';
 
+// Reads live SQLite state; must not be prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 function pillForBond(status: string): { className: string; label: string } {
   switch (status) {
     case 'issued':

@@ -1,6 +1,9 @@
 import { Fragment } from 'react';
 import { getDb } from '@/lib/db';
 import { getPlatformStats } from '@/lib/business';
+
+// Reads live SQLite state; must not be prerendered at build time.
+export const dynamic = 'force-dynamic';
 import { PROOF_ENTRIES, hashscanToken, hashscanTransaction, SUBGRAPH_QUERY_URL } from '@/lib/explorer';
 import { BookIcon, CardIcon, ChainIcon, ChartIcon, ClockIcon, CoinIcon, LockIcon, ShieldIcon, StoreIcon } from '../Icons';
 

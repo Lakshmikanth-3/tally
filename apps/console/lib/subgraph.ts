@@ -27,7 +27,12 @@ async function queryStudio<T>(query: string, variables?: Record<string, unknown>
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),
-    cache: 'no-store',
+    // Was `no-store`, which re-queried the subgraph on every render of
+    // every page that touches the register — the single largest cause of
+    // slow navigation. The data is still real and still fetched from the
+    // live subgraph; it is just allowed to be up to 30s stale, which is
+    // well inside the subgraph's own indexing lag.
+    next: { revalidate: 30 },
   });
   if (!res.ok) throw new Error(`subgraph request failed: ${res.status} ${await res.text()}`);
   const body = (await res.json()) as GraphQLResponse<T>;
