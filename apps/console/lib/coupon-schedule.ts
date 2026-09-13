@@ -1,6 +1,6 @@
 import { armCouponPayment, buildHederaClient } from '@tally/scheduler';
 import { getDb } from './db';
-import { getLatestBond } from './bonds';
+import { getLatestBond, type BondRecord } from './bonds';
 
 const MIRROR_NODE_URL = 'https://testnet.mirrornode.hedera.com/api/v1';
 const SECONDS_PER_YEAR = 365 * 86_400;
@@ -19,17 +19,113 @@ async function fetchHbarPerUsd(): Promise<number> {
   return (hbar / cents) * 100; // HBAR per whole USD dollar
 }
 
-/// This console's bonds carry a single coupon, paid as a bullet alongside
-/// redemption at maturity — there's no periodic coupon schedule modeled
-/// anywhere else in this codebase (BondTerms.couponIntervalSeconds/
-/// numberOfCoupons exist in @tally/seam's types but nothing here ever sets
-/// them to more than one payment). couponBps is the real annualized rate
-/// (see @tally/underwriting's pricing.ts), pro-rated for the bond's actual
-/// term rather than assumed to be a full year.
-function computeCouponAmountUsd(faceValueUsd: string, couponBps: number, startingDateSeconds: number, maturityDateSeconds: number): number {
-  const termSeconds = maturityDateSeconds - startingDateSeconds;
+/// couponBps is the real annualized rate (see @tally/underwriting's
+/// pricing.ts), so a single coupon covering `periodSeconds` of the bond's
+/// life is pro-rated to that period rather than assumed to be a full year.
+/// A 1-coupon bond's period is its whole term (the bullet-at-maturity case);
+/// an N-coupon bond's is term/N.
+function computeCouponAmountUsd(faceValueUsd: string, couponBps: number, periodSeconds: number): number {
   const annualRate = couponBps / 10_000;
-  return Number(faceValueUsd) * annualRate * (termSeconds / SECONDS_PER_YEAR);
+  return Number(faceValueUsd) * annualRate * (periodSeconds / SECONDS_PER_YEAR);
+}
+
+/// [VERIFIED via a real failed attempt] Hedera rejects a
+/// ScheduleCreateTransaction expiring too far out
+/// (SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE) — confirmed live: a 90-day
+/// expiration failed where an otherwise-identical 60-day one succeeded. So
+/// coupons can't all be armed at issuance; each is armed once its own due
+/// date comes inside this window. Kept deliberately below the observed
+/// ~60-day ceiling so a sweep never wastes a real transaction on one that
+/// is certain to be rejected.
+const SCHEDULABLE_HORIZON_SECONDS = 55 * 86_400;
+
+export interface CouponPayment {
+  couponIndex: number;
+  dueDateSeconds: number;
+  amountHbar: string | null;
+  scheduleId: string | null;
+  armedAt: number | null;
+  anchoredAt: number | null;
+  anchorTxId: string | null;
+  anchoredOnTime: boolean | null;
+}
+
+interface CouponPaymentRow {
+  coupon_index: number;
+  due_date_seconds: number;
+  amount_hbar: string | null;
+  schedule_id: string | null;
+  armed_at: number | null;
+  anchored_at: number | null;
+  anchor_tx_id: string | null;
+  anchored_on_time: number | null;
+}
+
+function rowToCouponPayment(row: CouponPaymentRow): CouponPayment {
+  return {
+    couponIndex: row.coupon_index,
+    dueDateSeconds: row.due_date_seconds,
+    amountHbar: row.amount_hbar,
+    scheduleId: row.schedule_id,
+    armedAt: row.armed_at,
+    anchoredAt: row.anchored_at,
+    anchorTxId: row.anchor_tx_id,
+    anchoredOnTime: row.anchored_on_time === null ? null : Boolean(row.anchored_on_time),
+  };
+}
+
+export function listCouponPayments(issuerId: string, bondCreatedAt: number): CouponPayment[] {
+  const rows = getDb()
+    .prepare('SELECT * FROM coupon_payments WHERE issuer_id = ? AND bond_created_at = ? ORDER BY coupon_index ASC')
+    .all(issuerId, bondCreatedAt) as CouponPaymentRow[];
+  return rows.map(rowToCouponPayment);
+}
+
+/// The real due dates a bond's coupons fall on, spread evenly across its
+/// term. The final coupon lands exactly on maturity rather than on an
+/// accumulated multiple of a floor()'d interval, so integer rounding can
+/// never push the last payment past (or short of) the real maturity date.
+export function computeCouponDueDates(
+  startingDateSeconds: number,
+  maturityDateSeconds: number,
+  numberOfCoupons: number,
+  couponIntervalSeconds?: number | null,
+): number[] {
+  const interval = couponIntervalSeconds ?? Math.floor((maturityDateSeconds - startingDateSeconds) / numberOfCoupons);
+  const dueDates: number[] = [];
+  for (let index = 1; index <= numberOfCoupons; index++) {
+    dueDates.push(index === numberOfCoupons ? maturityDateSeconds : startingDateSeconds + index * interval);
+  }
+  return dueDates;
+}
+
+/// Writes the bond's full real coupon schedule — every due date it owes
+/// across its term — without arming any of them yet. Idempotent: re-running
+/// leaves existing rows (and anything already armed) untouched.
+export function planCouponSchedule(bond: BondRecord): CouponPayment[] {
+  if (!bond.startingDateSeconds || !bond.maturityDateSeconds) {
+    throw new Error(`bond for ${bond.issuerId} has no real dates to derive a coupon schedule from`);
+  }
+  const existing = listCouponPayments(bond.issuerId, bond.createdAt);
+  if (existing.length === bond.numberOfCoupons) return existing;
+
+  const dueDates = computeCouponDueDates(
+    bond.startingDateSeconds,
+    bond.maturityDateSeconds,
+    bond.numberOfCoupons,
+    bond.couponIntervalSeconds,
+  );
+
+  const insert = getDb().prepare(
+    `INSERT OR IGNORE INTO coupon_payments (issuer_id, bond_created_at, coupon_index, due_date_seconds)
+     VALUES (?, ?, ?, ?)`,
+  );
+  const insertAll = getDb().transaction(() => {
+    dueDates.forEach((dueDateSeconds, i) => insert.run(bond.issuerId, bond.createdAt, i + 1, dueDateSeconds));
+  });
+  insertAll();
+
+  return listCouponPayments(bond.issuerId, bond.createdAt);
 }
 
 export interface ArmedCouponResult {
@@ -37,6 +133,7 @@ export interface ArmedCouponResult {
   transactionId: string;
   dueDateSeconds: number;
   amountHbar: number;
+  couponIndex: number;
 }
 
 /// Arms a real Hedera Scheduled Transaction for this bond's coupon,
@@ -47,17 +144,35 @@ export interface ArmedCouponResult {
 /// real accounts. Falls back to the custodian as its own bondholder only
 /// if that second account was never configured, so this still works
 /// before it exists.
-export async function armCouponForBond(issuerId: string): Promise<ArmedCouponResult> {
+export async function armCouponForBond(issuerId: string): Promise<ArmedCouponResult[]> {
   const bond = getLatestBond(issuerId);
   if (!bond || bond.status !== 'issued' || !bond.startingDateSeconds || !bond.maturityDateSeconds || !bond.couponBps || !bond.faceValueUsd) {
     throw new Error(`business ${issuerId} has no issued bond to arm a coupon for`);
+  }
+
+  const schedule = planCouponSchedule(bond);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const armable = schedule.filter(
+    (c) => c.scheduleId === null && c.dueDateSeconds > nowSeconds && c.dueDateSeconds - nowSeconds <= SCHEDULABLE_HORIZON_SECONDS,
+  );
+
+  if (armable.length === 0) {
+    const pending = schedule.filter((c) => c.scheduleId === null && c.dueDateSeconds > nowSeconds);
+    if (pending.length === 0) {
+      throw new Error(`every coupon for this bond is already armed or past due`);
+    }
+    const daysAway = Math.ceil((pending[0]!.dueDateSeconds - nowSeconds) / 86_400);
+    throw new Error(
+      `Hedera can't schedule a transaction this far in advance yet — the next unarmed coupon is ${daysAway} day(s) out. It'll arm automatically once it's inside Hedera's ~60-day window.`,
+    );
   }
 
   const accountId = requireEnv('HEDERA_ECDSA_ACCOUNT_ID');
   const privateKeyHex = requireEnv('HEDERA_ECDSA_PRIVATE_KEY');
   const bondholderAccountId = process.env.SECOND_ACCOUNT_ID || accountId;
 
-  const amountUsd = computeCouponAmountUsd(bond.faceValueUsd, bond.couponBps, bond.startingDateSeconds, bond.maturityDateSeconds);
+  const periodSeconds = bond.couponIntervalSeconds ?? bond.maturityDateSeconds - bond.startingDateSeconds;
+  const amountUsd = computeCouponAmountUsd(bond.faceValueUsd, bond.couponBps, periodSeconds);
   const hbarPerUsd = await fetchHbarPerUsd();
   // Hbar's constructor rejects any value with more than 8 decimal places
   // (tinybar is HBAR's smallest real unit) — round to it explicitly rather
@@ -66,47 +181,55 @@ export async function armCouponForBond(issuerId: string): Promise<ArmedCouponRes
   const amountHbar = Math.round(rawAmountHbar * 1e8) / 1e8;
 
   const client = buildHederaClient({ accountId, privateKeyHex });
+  const results: ArmedCouponResult[] = [];
   try {
-    let armed;
-    try {
-      armed = await armCouponPayment(client, {
+    for (const coupon of armable) {
+      const armed = await armCouponPayment(client, {
         treasuryAccountId: accountId,
         bondholderAccountId,
         amountHbar,
-        dueDateSeconds: bond.maturityDateSeconds,
-        memo: `tally-coupon-${issuerId}`,
+        dueDateSeconds: coupon.dueDateSeconds,
+        memo: `tally-coupon-${issuerId}-${coupon.couponIndex}`,
       });
-    } catch (err) {
-      // [VERIFIED via a real failed attempt] Hedera testnet genuinely
-      // rejects a ScheduleCreateTransaction whose expiration is too far in
-      // the future — confirmed live: this bond's real 90-day maturity
-      // failed with SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE, while an
-      // otherwise-identical 60-day-out schedule succeeded. This is a real
-      // network policy, not a bug: a coupon can only be armed once its due
-      // date falls inside Hedera's schedulable window, which is why
-      // settleCouponAndAnchor's own docs already describe this as meant to
-      // run periodically rather than once at issuance.
-      if ((err as Error).message.includes('SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE')) {
-        const daysUntilMaturity = Math.ceil((bond.maturityDateSeconds - Math.floor(Date.now() / 1000)) / 86_400);
-        throw new Error(
-          `Hedera can't schedule a transaction this far in advance yet — this bond matures in ${daysUntilMaturity} days. Try again closer to maturity.`,
-        );
-      }
-      throw err;
+
+      getDb()
+        .prepare(
+          `UPDATE coupon_payments SET schedule_id = ?, amount_hbar = ?, armed_at = ?
+           WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
+        )
+        .run(armed.scheduleId, String(amountHbar), Math.floor(Date.now() / 1000), issuerId, bond.createdAt, coupon.couponIndex);
+
+      results.push({
+        scheduleId: armed.scheduleId,
+        transactionId: armed.transactionId,
+        dueDateSeconds: coupon.dueDateSeconds,
+        amountHbar,
+        couponIndex: coupon.couponIndex,
+      });
     }
-
-    // bonds has no natural unique key besides its autoincrement id, which
-    // BondRecord doesn't carry — issuer_id + created_at together identify
-    // this exact run precisely (created_at is a real insert-time second-
-    // resolution timestamp set once per row, never updated).
-    getDb()
-      .prepare('UPDATE bonds SET coupon_schedule_id = ?, coupon_due_date_seconds = ?, coupon_amount_hbar = ? WHERE issuer_id = ? AND created_at = ?')
-      .run(armed.scheduleId, bond.maturityDateSeconds, String(amountHbar), issuerId, bond.createdAt);
-
-    return { scheduleId: armed.scheduleId, transactionId: armed.transactionId, dueDateSeconds: bond.maturityDateSeconds, amountHbar };
   } finally {
     client.close();
   }
+
+  return results;
+}
+
+/// Records that one coupon's real payment executed and its Coupon lifecycle
+/// event was anchored — only ever after a real mirror-node confirmation that
+/// the scheduled transfer actually ran (see lib/lifecycle.ts).
+export function markCouponPaymentAnchored(
+  issuerId: string,
+  bondCreatedAt: number,
+  couponIndex: number,
+  anchorTxId: string,
+  onTime: boolean,
+): void {
+  getDb()
+    .prepare(
+      `UPDATE coupon_payments SET anchored_at = ?, anchor_tx_id = ?, anchored_on_time = ?
+       WHERE issuer_id = ? AND bond_created_at = ? AND coupon_index = ?`,
+    )
+    .run(Math.floor(Date.now() / 1000), anchorTxId, onTime ? 1 : 0, issuerId, bondCreatedAt, couponIndex);
 }
 
 function requireEnv(name: string): string {

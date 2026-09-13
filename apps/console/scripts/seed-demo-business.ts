@@ -9,7 +9,10 @@ import { parseUsdToMicros } from '@tally/seam';
 import { getDb } from '../lib/db';
 import { markBusinessAsDemo, seedDemoTransactions } from '../lib/business';
 
-const ISSUER_ID = 'issuer-corrados-deli-f5bb20';
+// Defaults to the original demo business; pass an issuer id as the first
+// argument to seed a different one (e.g. a second demo business used to
+// exercise the post-issuance lifecycle on a short-term bond).
+const ISSUER_ID = process.argv[2] ?? 'issuer-corrados-deli-f5bb20';
 const DAYS_OF_HISTORY = 95;
 const BASE_DAILY_USD = 165;
 const VARIANCE_USD = 18; // deterministic, small — keeps volatilityScore low

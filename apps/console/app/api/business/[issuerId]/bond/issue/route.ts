@@ -11,15 +11,21 @@ export const maxDuration = 60;
 /// lib/bonds.ts). This is a real multi-transaction on-chain flow driven
 /// through a real headless-browser signer — expect ~15-30 real seconds,
 /// not an instant response.
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ issuerId: string }> }) {
   const { issuerId } = await params;
   const business = getBusiness(issuerId);
   if (!business) {
     return NextResponse.json({ error: `no registered business with issuerId ${issuerId}` }, { status: 404 });
   }
 
+  // Both optional — omitting them issues this platform's standard 90-day,
+  // single-bullet-coupon bond, which is what the UI does today.
+  const body = await req.json().catch(() => ({}));
+  const termSeconds = typeof body?.termSeconds === 'number' ? body.termSeconds : undefined;
+  const numberOfCoupons = typeof body?.numberOfCoupons === 'number' ? body.numberOfCoupons : undefined;
+
   try {
-    const bond = await issueBondForBusiness(issuerId);
+    const bond = await issueBondForBusiness(issuerId, { termSeconds, numberOfCoupons });
     return NextResponse.json({ bond });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });

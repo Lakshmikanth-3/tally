@@ -45,14 +45,11 @@ export interface BondRecord {
   startingDateSeconds: number | null;
   maturityDateSeconds: number | null;
   createdAt: number;
-  couponScheduleId: string | null;
-  couponDueDateSeconds: number | null;
-  couponAmountHbar: string | null;
-  couponAnchoredAt: number | null;
-  couponAnchorTxId: string | null;
   redeemedAt: number | null;
   redeemTransactionId: string | null;
   redeemOnTime: boolean | null;
+  numberOfCoupons: number;
+  couponIntervalSeconds: number | null;
 }
 
 function requireEnv(name: string): string {
@@ -94,11 +91,6 @@ function deriveBondCodes(issuerId: string): { symbol: string; isinIdentifier: st
 // persisted row never has them yet.
 type FreshBondFields =
   | 'createdAt'
-  | 'couponScheduleId'
-  | 'couponDueDateSeconds'
-  | 'couponAmountHbar'
-  | 'couponAnchoredAt'
-  | 'couponAnchorTxId'
   | 'redeemedAt'
   | 'redeemTransactionId'
   | 'redeemOnTime';
@@ -110,8 +102,9 @@ function persistBond(record: Omit<BondRecord, FreshBondFields>): BondRecord {
       `INSERT INTO bonds (
         issuer_id, status, reason_code, coupon_bps, face_value_usd, symbol, isin,
         bond_token_id, evm_diamond_address, transaction_id, error_message,
-        starting_date_seconds, maturity_date_seconds, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        starting_date_seconds, maturity_date_seconds, created_at,
+        number_of_coupons, coupon_interval_seconds
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       record.issuerId,
@@ -128,15 +121,12 @@ function persistBond(record: Omit<BondRecord, FreshBondFields>): BondRecord {
       record.startingDateSeconds,
       record.maturityDateSeconds,
       createdAt,
+      record.numberOfCoupons,
+      record.couponIntervalSeconds,
     );
   return {
     ...record,
     createdAt,
-    couponScheduleId: null,
-    couponDueDateSeconds: null,
-    couponAmountHbar: null,
-    couponAnchoredAt: null,
-    couponAnchorTxId: null,
     redeemedAt: null,
     redeemTransactionId: null,
     redeemOnTime: null,
@@ -158,14 +148,11 @@ interface BondRow {
   starting_date_seconds: number | null;
   maturity_date_seconds: number | null;
   created_at: number;
-  coupon_schedule_id: string | null;
-  coupon_due_date_seconds: number | null;
-  coupon_amount_hbar: string | null;
-  coupon_anchored_at: number | null;
-  coupon_anchor_tx_id: string | null;
   redeemed_at: number | null;
   redeem_transaction_id: string | null;
   redeem_on_time: number | null;
+  number_of_coupons: number;
+  coupon_interval_seconds: number | null;
 }
 
 function rowToBondRecord(row: BondRow): BondRecord {
@@ -184,14 +171,11 @@ function rowToBondRecord(row: BondRow): BondRecord {
     startingDateSeconds: row.starting_date_seconds,
     maturityDateSeconds: row.maturity_date_seconds,
     createdAt: row.created_at,
-    couponScheduleId: row.coupon_schedule_id,
-    couponDueDateSeconds: row.coupon_due_date_seconds,
-    couponAmountHbar: row.coupon_amount_hbar,
-    couponAnchoredAt: row.coupon_anchored_at,
-    couponAnchorTxId: row.coupon_anchor_tx_id,
     redeemedAt: row.redeemed_at,
     redeemTransactionId: row.redeem_transaction_id,
     redeemOnTime: row.redeem_on_time === null ? null : Boolean(row.redeem_on_time),
+    numberOfCoupons: row.number_of_coupons,
+    couponIntervalSeconds: row.coupon_interval_seconds,
   };
 }
 
@@ -238,15 +222,6 @@ export function listAllIssuedBonds(): BondRecord[] {
   return rows.map(rowToBondRecord);
 }
 
-/// Records that a coupon's Coupon lifecycle event was anchored — called
-/// only after settleCouponAndAnchor's own real mirror-node check confirms
-/// the scheduled payment actually executed.
-export function markCouponAnchored(issuerId: string, createdAt: number, anchorTxId: string): void {
-  getDb()
-    .prepare('UPDATE bonds SET coupon_anchored_at = ?, coupon_anchor_tx_id = ? WHERE issuer_id = ? AND created_at = ?')
-    .run(Math.floor(Date.now() / 1000), anchorTxId, issuerId, createdAt);
-}
-
 /// Records a real, already-succeeded redemption — never called
 /// speculatively ahead of Bond.fullRedeemAtMaturity actually succeeding.
 export function markBondRedeemed(issuerId: string, createdAt: number, transactionId: string, onTime: boolean): void {
@@ -263,18 +238,45 @@ export function markBondRedeemed(issuerId: string, createdAt: number, transactio
 /// not a simulated or instant result.
 const UNDERWRITING_COOLDOWN_SECONDS = 24 * 3600;
 
-export async function issueBondForBusiness(issuerId: string): Promise<BondRecord> {
+export interface IssueBondOptions {
+  /// Bond term in seconds. Defaults to MATURITY_SECONDS (90 days) — the
+  /// standard product term. A shorter term is a real, legitimate product
+  /// variant (working-capital financing is commonly 30/60/90-day), and is
+  /// also what makes the post-issuance lifecycle actually observable:
+  /// coupon arming is impossible until maturity falls inside Hedera's
+  /// ~60-day scheduling horizon, and redemption can't run until a bond has
+  /// genuinely matured.
+  termSeconds?: number;
+  /// How many coupon payments this bond makes across its term. Defaults to
+  /// 1 (a single bullet coupon at maturity). Higher values spread real,
+  /// separately-scheduled coupon payments evenly across the term — see
+  /// lib/coupon-schedule.ts.
+  numberOfCoupons?: number;
+}
+
+export async function issueBondForBusiness(issuerId: string, options: IssueBondOptions = {}): Promise<BondRecord> {
   const business = getBusiness(issuerId);
   if (!business) throw new Error(`business ${issuerId} not found`);
+
+  const termSeconds = options.termSeconds ?? MATURITY_SECONDS;
+  const numberOfCoupons = options.numberOfCoupons ?? 1;
+  if (termSeconds <= 0) throw new Error('termSeconds must be positive');
+  if (!Number.isInteger(numberOfCoupons) || numberOfCoupons < 1) {
+    throw new Error('numberOfCoupons must be a positive integer');
+  }
 
   // A real policy, not just UI throttling: a business's revenue snapshot
   // doesn't meaningfully change within a day, so re-running produces a
   // near-identical verdict — this blocks that, while a real 'failed' run
-  // (e.g. a transient network error) can still be retried immediately, and
-  // an 'issued' bond is never re-underwritten at all.
+  // (e.g. a transient network error) can still be retried immediately.
+  //
+  // An already-issued bond blocks a new one only while it's still
+  // outstanding: once it has genuinely been redeemed, the business has no
+  // live obligation and is free to raise again, which is the real-world
+  // rule this is modelling (not "one bond ever").
   const latest = getLatestBond(issuerId);
-  if (latest?.status === 'issued') {
-    throw new Error(`business ${issuerId} already has an issued bond — underwriting doesn't re-run on top of one`);
+  if (latest?.status === 'issued' && !latest.redeemedAt) {
+    throw new Error(`business ${issuerId} already has an outstanding bond — redeem it before issuing another`);
   }
   if (latest?.status === 'declined') {
     const secondsSince = Math.floor(Date.now() / 1000) - latest.createdAt;
@@ -302,6 +304,8 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
       errorMessage: null,
       startingDateSeconds: null,
       maturityDateSeconds: null,
+      numberOfCoupons,
+      couponIntervalSeconds: null, // no real dates on a declined run to derive an interval from
     });
   }
 
@@ -311,7 +315,12 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
   const isin = buildIsin('US', isinIdentifier);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const startingDateSeconds = nowSeconds + STARTING_DATE_BUFFER_SECONDS;
-  const maturityDateSeconds = startingDateSeconds + MATURITY_SECONDS;
+  const maturityDateSeconds = startingDateSeconds + termSeconds;
+  // Coupons are spread evenly across the real term, with the last one
+  // landing exactly on maturity — so a 1-coupon bond is a bullet paid at
+  // maturity (the previous, only behaviour) and an N-coupon bond pays every
+  // term/N seconds.
+  const couponIntervalSeconds = Math.floor(termSeconds / numberOfCoupons);
 
   const custodian = getCustodian();
   const issueParams: IssueBondParams = {
@@ -375,6 +384,8 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
       errorMessage: (err as Error).message,
       startingDateSeconds,
       maturityDateSeconds,
+      numberOfCoupons,
+      couponIntervalSeconds,
     });
   } finally {
     await session.close();
@@ -394,6 +405,8 @@ export async function issueBondForBusiness(issuerId: string): Promise<BondRecord
     errorMessage: null,
     startingDateSeconds,
     maturityDateSeconds,
+    numberOfCoupons,
+    couponIntervalSeconds,
   });
 }
 

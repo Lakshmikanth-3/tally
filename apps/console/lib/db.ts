@@ -53,6 +53,31 @@ export function getDb(): Database.Database {
     );
 
     CREATE INDEX IF NOT EXISTS idx_bonds_issuer ON bonds(issuer_id);
+
+    -- One row per individual coupon payment a bond owes. A bond's coupons
+    -- can't all be armed up front: Hedera refuses a ScheduleCreateTransaction
+    -- expiring more than ~60 days out, so this table records the full real
+    -- schedule at issuance and each coupon is armed later, once its own due
+    -- date comes inside that window (see lib/coupon-schedule.ts).
+    -- bond_created_at identifies which bond row this belongs to — the bonds
+    -- table is insert-only per underwriting run and (issuer_id, created_at)
+    -- is unique within it.
+    CREATE TABLE IF NOT EXISTS coupon_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      issuer_id TEXT NOT NULL REFERENCES businesses(issuer_id),
+      bond_created_at INTEGER NOT NULL,
+      coupon_index INTEGER NOT NULL,
+      due_date_seconds INTEGER NOT NULL,
+      amount_hbar TEXT,
+      schedule_id TEXT,
+      armed_at INTEGER,
+      anchored_at INTEGER,
+      anchor_tx_id TEXT,
+      anchored_on_time INTEGER
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_coupon_payments_unique
+      ON coupon_payments(issuer_id, bond_created_at, coupon_index);
   `);
 
   addColumnIfMissing(db, 'businesses', 'stripe_account_id', 'TEXT');
@@ -70,6 +95,12 @@ export function getDb(): Database.Database {
   addColumnIfMissing(db, 'bonds', 'redeemed_at', 'INTEGER');
   addColumnIfMissing(db, 'bonds', 'redeem_transaction_id', 'TEXT');
   addColumnIfMissing(db, 'bonds', 'redeem_on_time', 'INTEGER');
+  // Bond terms: how many coupons this bond pays and how far apart. Existing
+  // rows predate multi-coupon support and are all single-bullet bonds, so
+  // they default to 1 coupon; the interval is nullable because it's only
+  // meaningful once the bond's real starting/maturity dates exist.
+  addColumnIfMissing(db, 'bonds', 'number_of_coupons', 'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfMissing(db, 'bonds', 'coupon_interval_seconds', 'INTEGER');
 
   // SQLite unique indexes treat NULL as distinct from every other value, so
   // manual transactions (stripe_charge_id IS NULL) are unaffected — this

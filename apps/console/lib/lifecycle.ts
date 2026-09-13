@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { buildHederaClient, settleCouponAndAnchor } from '@tally/scheduler';
-import { getCustodian, listAllIssuedBonds, markCouponAnchored } from './bonds';
-import { armCouponForBond } from './coupon-schedule';
+import { getCustodian, listAllIssuedBonds } from './bonds';
+import { armCouponForBond, listCouponPayments, markCouponPaymentAnchored } from './coupon-schedule';
 import { redeemBondForBusiness } from './redemption';
 import { computeBondId } from './secondary-market';
 
@@ -29,43 +29,54 @@ export async function runDueLifecycleActions(): Promise<LifecycleRunSummary> {
   for (const bond of bonds) {
     if (!bond.bondTokenId || !bond.evmDiamondAddress || !bond.maturityDateSeconds) continue;
 
-    if (!bond.couponScheduleId) {
-      try {
-        await armCouponForBond(bond.issuerId);
-        summary.armedCoupons.push(bond.issuerId);
-      } catch (err) {
-        // A bond maturing more than ~60 days out will hit this on every
-        // sweep until it falls inside Hedera's schedulable window — that's
-        // the expected, real steady state, not something to report as an
-        // error each time.
-        const message = (err as Error).message;
-        if (!message.includes("can't schedule a transaction this far in advance")) {
-          summary.errors.push({ issuerId: bond.issuerId, step: 'arm-coupon', message });
-        }
+    // Arm whichever coupons have come inside Hedera's schedulable window
+    // since the last sweep — a multi-coupon bond arms progressively, not
+    // all at once (see lib/coupon-schedule.ts).
+    try {
+      const armed = await armCouponForBond(bond.issuerId);
+      for (const coupon of armed) {
+        summary.armedCoupons.push(`${bond.issuerId}#${coupon.couponIndex}`);
+      }
+    } catch (err) {
+      // A coupon still beyond the window, or a bond with nothing left to
+      // arm, hits this on every sweep — the expected steady state, not an
+      // error worth reporting each time.
+      const message = (err as Error).message;
+      const expected =
+        message.includes("can't schedule a transaction this far in advance") || message.includes('already armed or past due');
+      if (!expected) {
+        summary.errors.push({ issuerId: bond.issuerId, step: 'arm-coupon', message });
       }
     }
 
-    if (bond.couponScheduleId && !bond.couponAnchoredAt) {
+    // Anchor a Coupon lifecycle event for each armed coupon whose real
+    // scheduled payment has actually executed — never speculatively.
+    const duePayments = listCouponPayments(bond.issuerId, bond.createdAt).filter(
+      (c) => c.scheduleId !== null && c.anchoredAt === null && c.dueDateSeconds <= nowSeconds,
+    );
+    if (duePayments.length > 0) {
       try {
         const custodian = getCustodian();
         const client = buildHederaClient({ accountId: custodian.accountId, privateKeyHex: custodian.privateKeyHex });
         try {
           const bondIdHex = computeBondId(bond.evmDiamondAddress, bond.bondTokenId);
-          const outcome = await settleCouponAndAnchor(client, {
-            settlementAnchorContractId: SETTLEMENT_ANCHOR_HEDERA_ID,
-            scheduleId: bond.couponScheduleId,
-            dueDateSeconds: bond.couponDueDateSeconds ?? bond.maturityDateSeconds,
-            bondId: ethers.getBytes(bondIdHex),
-            issuerEvmAddress: custodian.evmAddress,
-            // No real HCS topic submission exists in this project — this
-            // field is a free-text audit reference (see the one real
-            // existing anchored event's hcsTxId, "genesis-issuance-test"),
-            // so the real scheduleId is an honest, real value here.
-            hcsTxId: bond.couponScheduleId,
-          });
-          if (outcome.status === 'anchored') {
-            markCouponAnchored(bond.issuerId, bond.createdAt, outcome.anchor.transactionId);
-            summary.anchoredCoupons.push(bond.issuerId);
+          for (const coupon of duePayments) {
+            const outcome = await settleCouponAndAnchor(client, {
+              settlementAnchorContractId: SETTLEMENT_ANCHOR_HEDERA_ID,
+              scheduleId: coupon.scheduleId!,
+              dueDateSeconds: coupon.dueDateSeconds,
+              bondId: ethers.getBytes(bondIdHex),
+              issuerEvmAddress: custodian.evmAddress,
+              // No real HCS topic submission exists in this project — this
+              // field is a free-text audit reference (see the one real
+              // existing anchored event's hcsTxId, "genesis-issuance-test"),
+              // so the real scheduleId is an honest, real value here.
+              hcsTxId: coupon.scheduleId!,
+            });
+            if (outcome.status === 'anchored') {
+              markCouponPaymentAnchored(bond.issuerId, bond.createdAt, coupon.couponIndex, outcome.anchor.transactionId, outcome.onTime);
+              summary.anchoredCoupons.push(`${bond.issuerId}#${coupon.couponIndex}`);
+            }
           }
         } finally {
           client.close();
