@@ -33,3 +33,5 @@ Thumbs.db
 # Playwright e2e artifacts (regenerable)
 test-results/
 playwright-report/
+
+.vercel

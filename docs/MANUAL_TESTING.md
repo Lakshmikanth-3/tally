@@ -131,28 +131,138 @@ cre workflow simulate underwriting --target staging-settings --non-interactive -
 
 > Both flags are required. Without `--target` and `--trigger-index` the CLI hangs on an interactive picker with no prompt.
 
-**Status:** the workflow is complete and simulation-verified. Live TEE deployment is pending Chainlink's Confidential Workflows private-beta access review. The console's "Run underwriting" button applies the *same* policy (same `@tally/underwriting` package) in Tally's backend — the UI says so explicitly rather than implying the click invoked CRE.
+**Status:** the workflow is **deployed and executing live** on Chainlink's real DON, not just simulated:
+
+```bash
+cre workflow list --registry private          # tally-underwriting-staging, ACTIVE
+cre execution list tally-underwriting-staging # real cron executions, SUCCESS
+```
+
+> **Live executions need the console publicly reachable.** Chainlink's nodes
+> can't reach `localhost`. Run `ngrok http 3000`, put that URL in
+> `underwriting/config.staging.json`'s `consoleBaseUrl`, and redeploy
+> (`cre workflow deploy underwriting --target staging-settings --yes`).
+> Without it, executions fail with `Revenue fetch failed with status: 400`.
+
+> **The TEE enclave is not actually running.** Even on a `SUCCESS` execution the
+> `confidential-workflows` capability fails with `cannot validate enclave config:
+> DON members not set` — Chainlink-side provisioning. The run is real; it is
+> **not** confidential. Don't describe it as such.
+
+The console's "Run underwriting" button applies the *same* policy (same
+`@tally/underwriting` package) in Tally's backend — the UI says so explicitly
+rather than implying the click invoked CRE.
+
+---
+
+## 9. Coupon schedule — the strongest thing to check
+
+`/business/issuer-lifecycle-demo-co-c89705` → **Coupon schedule**
+
+**Expected:** three coupons, each with a real Hedera schedule ID and "✓ on time".
+
+Verify Hedera really executed them itself, with no keeper:
+
+```bash
+curl -s https://testnet.mirrornode.hedera.com/api/v1/schedules/0.0.10519300
+# executed_timestamp is populated and matches the due date
+```
+
+And that real HBAR actually moved to the bondholder:
+
+```bash
+curl -s "https://testnet.mirrornode.hedera.com/api/v1/transactions?account.id=0.0.10481844&transactiontype=CRYPTOTRANSFER&order=desc&limit=10"
+```
+
+> You'll see a **fourth**, larger receipt (0.38428845 ℏ) alongside the three
+> 0.12809615 ℏ coupons. That's real and expected: multi-coupon support landed
+> while this bond was live, and the older single-bullet code path armed one
+> whole-term coupon before the new code took effect.
+
+**Arming more coupons.** Hedera refuses a schedule expiring more than ~60 days
+out, so a fresh 90-day bond can't arm anything yet — the button says so. Issue a
+short-term bond to see arming succeed immediately:
+
+```bash
+curl -X POST http://localhost:3000/api/business/<issuerId>/bond/issue   -H 'Content-Type: application/json'   -d '{"termSeconds":1500,"numberOfCoupons":3}'
+```
+
+---
+
+## 10. Secondary market — `/market`
+
+**What to check**
+
+- The order book renders from **real on-chain logs** (Hedera Mirror Node), not a local table.
+- "Place a bid" lists every real issued bond.
+- On an issued bond's page, "List on secondary market" places a real ask **and** escrows the unit.
+
+**The compliance rejection (the interesting one).** Fill an order using a second
+account that was never KYC'd on that bond — the gear icon next to "Attempt fill"
+takes a taker private key:
+
+**Expected:** `transfer restricted: counterparty not compliant` — refused by the
+ATS token itself, not by this UI. Filling as the custodian (leave the key blank)
+succeeds instead. Both are real on-chain outcomes.
+
+---
+
+## 11. Redemption — known failure
+
+On a matured bond, **Redemption** → "Redeem at maturity".
+
+**Expected:** it **fails.** `Bond.fullRedeemAtMaturity` reverts with empty revert
+data even though every precondition is satisfied on-chain. This is a known,
+documented issue — see `packages/ats-client/src/redeem.ts` for everything ruled
+out. On a bond that hasn't matured you'll get an honest "not yet matured" message
+instead.
+
+---
+
+## 12. The value-moving routes are guarded
+
+Routes that spend real funds refuse proxied callers, so running behind a tunnel
+doesn't publish them:
+
+```bash
+# Local — passes the guard (400 = rejected on the empty body, not the guard)
+curl -s -o /dev/null -w '%{http_code}
+' -X POST http://localhost:3000/api/market/orders   -H 'Content-Type: application/json' -d '{}'
+
+# Pretending to arrive through a tunnel — refused
+curl -s -X POST http://localhost:3000/api/market/orders   -H 'X-Forwarded-For: 203.0.113.9' -H 'Content-Type: application/json' -d '{}'
+```
+
+**Expected:** `400` then a `403` explaining why. See `apps/console/lib/api-guard.ts`.
+
+---
+
+## 13. Read-only showcase mode
+
+What the hosted deployment runs:
+
+```bash
+TALLY_READ_ONLY=1 npx next dev -p 3100
+```
+
+**Expected:** a red banner on every page, real data from the scrubbed
+`showcase.db` snapshot, and any write action refused with `501` and a plain
+explanation. The lifecycle sweep stays off — it has no key and no browser there.
 
 ---
 
 ## Automated tests
 
 ```bash
-# Unit tests — pure logic, no network
-pnpm --filter "@tally/*" test          # 26 tests across seam/underwriting/scheduler
-cd apps/console && npx vitest run      # 7 tests, explorer links + proof entries
-
-# Contract tests
-cd contracts && forge test
+# Everything at once, from the repo root
+pnpm typecheck        # all 6 packages
+pnpm test             # 41 unit tests across seam / underwriting / scheduler / console
+pnpm contracts:test   # 8 Foundry tests, including a 256-run fuzz
 
 # End-to-end — drives the real UI and real API routes in a real browser
-cd apps/console && npx playwright test # 5 tests
+cd apps/console && npx playwright test   # 9 tests
 ```
 
 The e2e suite registers a real business, asserts it's honestly declined, checks the explorer links, and **deletes exactly the rows it created** afterwards so the dashboard isn't polluted.
 
-```bash
-# Typecheck everything
-pnpm -r --filter "@tally/*" typecheck
-cd apps/console && npx tsc --noEmit
-```
+**Totals: 41 unit + 8 contract + 9 e2e = 58 tests.**
