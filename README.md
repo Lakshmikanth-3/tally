@@ -142,9 +142,8 @@ simulation. Three things must be said alongside it:
    require a transaction on Ethereum mainnet.
 
 Note the verdict differs from today's: in September this issuer **approved** at
-460 bps. The seeded revenue has since aged, so the trailing-90-day window now
-scores volatility 100 and the policy declines it. Same code, different inputs —
-which is what a policy that actually reads its inputs looks like.
+460 bps; today its volatility scores 100 and the policy declines it. The cause
+of that input change has not been established.
 
 #### What "simulation" means here
 
@@ -159,7 +158,7 @@ parts are simulated and which are not.
 | Revenue fetch | — | A real HTTPS call to the live console API, returning real database rows |
 | Underwriting policy | — | The real `packages/underwriting` code, applied to those figures |
 | Report signing | Signed by the simulator, not by DON consensus | — |
-| The chain write | — | **A real transaction on public Ethereum Sepolia**, costing real gas, into the real deployed contract |
+| The chain write | — | **A real transaction on public Ethereum Sepolia**, paying Sepolia testnet gas, into the real deployed contract |
 
 The write goes through Sepolia's **MockKeystoneForwarder**, which is what
 `simulate --broadcast` targets. It is a real deployed contract making a real
@@ -168,7 +167,7 @@ call, but it does not verify DON signatures the way the production
 does. `UnderwritingRegistry.setForwarder()` repoints the receiver at the
 production forwarder for a live DON deployment.
 
-So: the verdict, the transaction, the gas, the stored state and the event are
+So: the verdict, the transaction, the stored state and the event are
 all real and independently checkable. What is not real is DON consensus over
 this particular run, and the enclave. CRE's bounty requirement reads "a
 successful CRE CLI simulation **or** a live CRE deployment" — this repo has
@@ -178,8 +177,8 @@ Reason code `3` is `VOLATILITY_TOO_HIGH`: the issuer's revenue scores 100
 against a policy ceiling of 40. **The live verdict is a decline, and that is
 the correct answer** — the policy in `packages/underwriting` runs for real
 rather than being staged to produce a flattering approval. 760 bps follows the
-published formula, 400 + 4 × (100 − 10). The decision is reproducible by anyone
-who reads the policy and the stored inputs.
+published formula, 400 + 4 × (100 − 10). The inputs themselves are private, so an
+outside reader can check the stored verdict and the policy, not the revenue.
 
 > **A green receipt does not prove a CRE write landed.** The first broadcast
 > run returned a transaction hash and a mined receipt with `status: 1`, yet
