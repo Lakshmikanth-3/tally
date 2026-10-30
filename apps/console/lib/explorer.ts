@@ -33,6 +33,10 @@ export function etherscanAddress(address: string): string {
   return `${ETHERSCAN_SEPOLIA}/address/${address}`;
 }
 
+export function etherscanTransaction(txHash: string): string {
+  return `${ETHERSCAN_SEPOLIA}/tx/${txHash}`;
+}
+
 export interface ProofEntry {
   group: 'Hedera testnet' | 'Ethereum Sepolia' | 'The Graph';
   label: string;
@@ -79,6 +83,20 @@ export const PROOF_ENTRIES: ProofEntry[] = [
     value: '0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4',
     href: etherscanAddress('0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4'),
     note: 'Deployed from the same custodian account as the Hedera copy — Subgraph Studio cannot index Hedera.',
+  },
+  {
+    group: 'Ethereum Sepolia',
+    label: 'UnderwritingRegistry',
+    value: '0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c',
+    href: etherscanAddress('0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c'),
+    note: 'Where the Chainlink CRE workflow writes its verdict. Only the Keystone forwarder may call onReport; read latestVerdict(issuerId) to check any decision yourself.',
+  },
+  {
+    group: 'Ethereum Sepolia',
+    label: 'CRE verdict transaction',
+    value: '0xa58ea689…f4e085',
+    href: etherscanTransaction('0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085'),
+    note: 'A real verdict delivered on-chain by the workflow: approved=false, 760 bps, reason 3 (volatility too high).',
   },
   {
     group: 'Ethereum Sepolia',

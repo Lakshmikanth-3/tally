@@ -54,15 +54,31 @@ describe('proof entries', () => {
     }
   });
 
-  it('lists a real EVM address for each Sepolia copy', () => {
-    // The Sepolia copies exist only so The Graph can index them (Hedera
-    // isn't Studio-indexable) — deployed from the same custodian account as
-    // the Hedera originals, but not necessarily at the same CREATE address,
-    // since that depends on the account's nonce at deploy time on each chain.
+  it('points every Sepolia entry at a well-formed Etherscan link', () => {
+    // Two kinds live here now. The indexed copies of SettlementAnchor and
+    // SecondaryMarket exist only so The Graph can index them (Hedera isn't
+    // Studio-indexable). The UnderwritingRegistry is where Chainlink CRE
+    // writes its verdict, and one entry links the verdict transaction itself
+    // rather than an address — so assert the link, which is what a visitor
+    // actually clicks, instead of assuming every value is an address.
     const sepolia = PROOF_ENTRIES.filter((e) => e.group === 'Ethereum Sepolia');
-    expect(sepolia).toHaveLength(2);
+    expect(sepolia.length).toBeGreaterThanOrEqual(4);
+
     for (const entry of sepolia) {
-      expect(entry.value).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      expect(entry.href.startsWith('https://sepolia.etherscan.io/')).toBe(true);
+
+      if (entry.href.includes('/address/')) {
+        expect(entry.href).toMatch(/\/address\/0x[0-9a-fA-F]{40}$/);
+        expect(entry.value).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      } else {
+        expect(entry.href).toMatch(/\/tx\/0x[0-9a-fA-F]{64}$/);
+      }
     }
+  });
+
+  it('includes the UnderwritingRegistry the CRE workflow writes to', () => {
+    const registry = PROOF_ENTRIES.find((e) => e.label === 'UnderwritingRegistry');
+    expect(registry).toBeDefined();
+    expect(registry!.value).toBe('0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c');
   });
 });
