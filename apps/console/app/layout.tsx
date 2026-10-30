@@ -34,10 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               textAlign: 'center',
             }}
           >
-            <strong>Hosted deployment.</strong> Registering a business, connecting Stripe and reading revenue all work
-            here, against the same live database as the local console. Actions that move value (issuing a bond, arming
-            coupons, filling an order) sign with a real custodian key through a real headless browser, so they run from
-            the local console — see <code>DEMO.md</code>.
+            <strong>Hosted demo.</strong> Reading works here, against the live database. Anything that moves value
+            signs with the custodian key, which never reaches a server — those run from the local console (
+            <code>DEMO.md</code>).
           </div>
         )}
         {children}
