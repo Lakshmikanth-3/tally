@@ -13,3 +13,4 @@ remappings = [
 
 [rpc_endpoints]
 hedera_testnet = "https://testnet.hashio.io/api"
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
