@@ -73,7 +73,7 @@ a log. Raw capture: [`docs/evidence/`](docs/evidence/).
 | `UnderwritingRegistry` | [`0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c`](https://sepolia.etherscan.io/address/0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c) |
 | Deploy tx | [`0x8bc4e0de…08fe2a`](https://sepolia.etherscan.io/tx/0x8bc4e0de57c08d6ca4a3fbcf61401da7e849d7caf44b7853fd904533ae08fe2a) · block 12,027,293 |
 | Verdict tx | [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085) · block 12,028,219 |
-| Called by | Keystone forwarder [`0x15fC6ae9…1f9F88`](https://sepolia.etherscan.io/address/0x15fC6ae953E024d975e77382eEeC56A9101f9F88) — the only address `onReport` accepts |
+| Called by | Sepolia **Mock**KeystoneForwarder [`0x15fC6ae9…1f9F88`](https://sepolia.etherscan.io/address/0x15fC6ae953E024d975e77382eEeC56A9101f9F88) — the only address `onReport` accepts (see *What "simulation" means* below) |
 | Event | `UnderwritingVerdict` · topic0 `0x326ffcc5…cb935` |
 | Stored verdict | `approved=false · couponBps=760 · reasonCode=3 · exists=true` |
 | CRE workflow | `tally-underwriting-staging`, ID `00e48d5e…e23f5` (private registry, **paused**) |
@@ -85,7 +85,7 @@ sequenceDiagram
     participant API as Tally revenue API<br/>(bearer secret from Vault)
     participant WF as CRE workflow<br/>handlerInTee
     participant DON as Workflow DON
-    participant FWD as Keystone forwarder<br/>0x15fC6ae9…
+    participant FWD as MockKeystoneForwarder<br/>0x15fC6ae9…
     participant REG as UnderwritingRegistry<br/>0xFde2B318…
 
     WF->>API: GET /revenue
@@ -112,6 +112,34 @@ cast call 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c \
 # (false, 760, 3, 1793381952 [1.793e9], true)
 #  approved, couponBps, reasonCode, timestamp, exists
 ```
+
+#### What "simulation" means here
+
+The CLI prints `[SIMULATION]` throughout, so it is worth being exact about which
+parts are simulated and which are not.
+
+| | Simulated | Real |
+|---|---|---|
+| Where the workflow runs | On this machine, not on Chainlink's DON nodes | The compiled WASM binary is the same artifact a DON would run (`f33a93b8…`) |
+| The enclave | Not a TEE — the CLI says so itself | — |
+| The cron trigger | Fired by hand instead of on schedule | — |
+| Revenue fetch | — | A real HTTPS call to the live console API, returning real database rows |
+| Underwriting policy | — | The real `packages/underwriting` code, applied to those figures |
+| Report signing | Signed by the simulator, not by DON consensus | — |
+| The chain write | — | **A real transaction on public Ethereum Sepolia**, costing real gas, into the real deployed contract |
+
+The write goes through Sepolia's **MockKeystoneForwarder**, which is what
+`simulate --broadcast` targets. It is a real deployed contract making a real
+call, but it does not verify DON signatures the way the production
+[`KeystoneForwarder`](https://sepolia.etherscan.io/address/0xF8344CFd5c43616a4366C34E3EEE75af79a74482)
+does. `UnderwritingRegistry.setForwarder()` repoints the receiver at the
+production forwarder for a live DON deployment.
+
+So: the verdict, the transaction, the gas, the stored state and the event are
+all real and independently checkable. What is not real is DON consensus over
+this particular run, and the enclave. CRE's bounty requirement reads "a
+successful CRE CLI simulation **or** a live CRE deployment" — this repo has
+both, and neither is described as more than it is.
 
 Reason code `3` is `VOLATILITY_TOO_HIGH`: the issuer's revenue scores 100
 against a policy ceiling of 40. **The live verdict is a decline, and that is
