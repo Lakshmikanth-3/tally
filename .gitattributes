@@ -1,0 +1,6 @@
+# The CRE toolchain hashes these config files byte-for-byte and prints the
+# result as the workflow's "Config hash". Letting Git hand Windows checkouts
+# CRLF changes those bytes, so the hash stops matching the one recorded in
+# docs/evidence/ and the README. Pin them to LF so the hash is reproducible
+# on every platform.
+cre/tally-cre/**/config.*.json text eol=lf

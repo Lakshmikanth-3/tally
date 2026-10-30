@@ -31,8 +31,14 @@ cre workflow simulate underwriting --target staging-settings --broadcast \
 ```
 
 This needs a funded Sepolia key, a logged-in CRE CLI (`cre login`), `bun` on
-PATH, and `REVENUE_API_TOKEN` set on the deployed console to the same value as
+PATH as a real `bun.exe` (on Windows the npm `.cmd`/`.ps1` shims are not
+enough — the compiler calls `spawn('bun')`, which cannot execute them), and
+`REVENUE_API_TOKEN` set on the deployed console to the same value as
 `CRE_REVENUE_API_TOKEN` in `cre/tally-cre/.env`.
+
+The **config hash** above only reproduces if `config.staging.json` is checked
+out with LF line endings — the toolchain hashes the file's bytes, so a CRLF
+checkout silently yields a different hash. `.gitattributes` pins it.
 
 To deploy a fresh registry first:
 
