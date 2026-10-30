@@ -2,5 +2,10 @@
   "schedule": "0 */5 * * * *",
   "consoleBaseUrl": "https://tally-eight-jet.vercel.app",
   "issuerId": "issuer-corrados-deli-f5bb20",
-  "secretId": "REVENUE_API_TOKEN"
+  "secretId": "REVENUE_API_TOKEN",
+  "evm": {
+    "chainName": "ethereum-testnet-sepolia",
+    "registryAddress": "0x0000000000000000000000000000000000000000",
+    "gasLimit": "500000"
+  }
 }

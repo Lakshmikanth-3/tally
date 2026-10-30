@@ -1,30 +1,68 @@
 import { describe, expect } from 'bun:test'
-import type { TeeRuntime } from '@chainlink/cre-sdk'
+import { TxStatus, type TeeRuntime } from '@chainlink/cre-sdk'
 import { test } from '@chainlink/cre-sdk/test'
-import { initWorkflow, onCronTrigger } from './workflow'
+import { decodeAbiParameters, parseAbiParameters } from 'viem'
+import { initWorkflow, onUnderwritingTrigger } from './workflow'
 
 const API_TOKEN = 'test-token'
+const REGISTRY = '0x1111111111111111111111111111111111111111'
+const SEPOLIA_SELECTOR = 16015286601757825753n
 
 const makeConfig = () => ({
 	schedule: '0 */1 * * * *',
-	url: 'https://postman-echo.com/headers',
-	secretId: 'API_TOKEN',
-	scoreThreshold: 500,
+	consoleBaseUrl: 'http://localhost:3000',
+	issuerId: 'issuer-test',
+	secretId: 'REVENUE_API_TOKEN',
+	evm: { chainName: 'ethereum-testnet-sepolia', registryAddress: REGISTRY, gasLimit: '500000' },
 })
 
-// The public test surface does not yet ship a TEE runtime factory
-// (`newTestRuntime` returns a DON `Runtime`), so we stand up the small slice of
-// `TeeRuntime` the handler actually uses: config, getSecret, callCapability
-// (which HTTPClient.sendRequest goes through), log, and usingTheDons.
-type FakeTeeRuntimeOptions = {
-	statusCode?: number
-	body?: string
+// An approvable snapshot: >= 30 days history, >= $3,000 (6-dp fixed point), volatility <= 40.
+const APPROVABLE = {
+	issuerId: 'issuer-test',
+	trailing90dTotalUSD: '12345678900',
+	volatilityScore: 17,
+	historyDays: 95,
 }
 
-const makeFakeTeeRuntime = ({ statusCode = 200, body = 'hello' }: FakeTeeRuntimeOptions = {}) => {
+type FakeOptions = {
+	statusCode?: number
+	snapshot?: object
+	txStatus?: TxStatus
+	receiverStatus?: number
+}
+
+// The public test surface does not ship a TEE runtime factory, so we stand up
+// the slice of TeeRuntime / Runtime the handler uses: config, getSecret,
+// callCapability (HTTPClient and EVMClient both go through it), log,
+// usingTheDons and report.
+const makeFakeTeeRuntime = ({
+	statusCode = 200,
+	snapshot = APPROVABLE,
+	txStatus = TxStatus.SUCCESS,
+	receiverStatus,
+}: FakeOptions = {}) => {
 	const capturedHeaders: string[] = []
-	const reports: unknown[] = []
+	const reports: { encodedPayload: string }[] = []
+	const writes: { capabilityId: string; payload: { receiver: Uint8Array; gasConfig?: { gasLimit: bigint } } }[] = []
 	const logs: string[] = []
+
+	const donRuntime = {
+		report: (input: { encodedPayload: string }) => {
+			reports.push(input)
+			return { result: () => ({ x_generatedCodeOnly_unwrap: () => undefined }) }
+		},
+		callCapability: (call: (typeof writes)[number]) => {
+			writes.push(call)
+			return {
+				result: () => ({
+					txStatus,
+					receiverContractExecutionStatus: receiverStatus,
+					txHash: new Uint8Array(32).fill(0xab),
+				}),
+			}
+		},
+		log: (message: string) => logs.push(message),
+	}
 
 	const runtime = {
 		config: makeConfig(),
@@ -37,85 +75,91 @@ const makeFakeTeeRuntime = ({ statusCode = 200, body = 'hello' }: FakeTeeRuntime
 			return {
 				result: () => ({
 					statusCode,
-					body: new TextEncoder().encode(body),
+					body: new TextEncoder().encode(JSON.stringify(snapshot)),
 				}),
 			}
 		},
 		log: (message: string) => logs.push(message),
-		usingTheDons: () => ({
-			report: (input: unknown) => {
-				reports.push(input)
-				return { result: () => ({}) }
-			},
-		}),
+		usingTheDons: () => donRuntime,
 	}
 
-	return { runtime: runtime as unknown as TeeRuntime<ReturnType<typeof makeConfig>>, capturedHeaders, reports, logs }
+	return {
+		runtime: runtime as unknown as TeeRuntime<ReturnType<typeof makeConfig>>,
+		capturedHeaders,
+		reports,
+		writes,
+		logs,
+	}
 }
 
-describe('onCronTrigger', () => {
-	test('injects the enclave-fetched secret into the outbound request', () => {
+const decodeReport = (b64: string) =>
+	decodeAbiParameters(
+		parseAbiParameters('string issuerId, bool approved, uint256 recommendedCouponBps, uint8 reasonCode'),
+		`0x${Buffer.from(b64, 'base64').toString('hex')}`,
+	)
+
+describe('onUnderwritingTrigger', () => {
+	test('injects the enclave-fetched secret into the revenue request', () => {
 		const { runtime, capturedHeaders } = makeFakeTeeRuntime()
-
-		onCronTrigger(runtime)
-
+		onUnderwritingTrigger(runtime)
 		expect(capturedHeaders).toEqual([`Bearer ${API_TOKEN}`])
 	})
 
-	test('confirms the secret reached the API when the response echoes it back', () => {
-		const { runtime } = makeFakeTeeRuntime({ body: `{"authorization":"Bearer ${API_TOKEN}"}` })
-
-		expect(onCronTrigger(runtime)).toContain('secret reached API: true')
-	})
-
-	test('reports the secret did not reach the API when it is absent', () => {
-		const { runtime } = makeFakeTeeRuntime({ body: '{"authorization":"Bearer other"}' })
-
-		expect(onCronTrigger(runtime)).toContain('secret reached API: false')
-	})
-
-	test('crosses back to the DON to generate a report', () => {
+	test('approves a qualifying business and encodes only the verdict', () => {
 		const { runtime, reports } = makeFakeTeeRuntime()
-
-		onCronTrigger(runtime)
+		expect(onUnderwritingTrigger(runtime)).toStartWith('APPROVED (bps=428, reason=0)')
 
 		expect(reports).toHaveLength(1)
-		expect(reports[0]).toMatchObject({
-			encoderName: 'evm',
-			signingAlgo: 'ecdsa',
-			hashingAlgo: 'keccak256',
-		})
+		const [issuerId, approved, bps, reason] = decodeReport(reports[0].encodedPayload)
+		expect(issuerId).toBe('issuer-test')
+		expect(approved).toBe(true)
+		expect(bps).toBe(428n)
+		expect(reason).toBe(0)
 	})
 
-	test('APPROVEs when the confidential score clears the threshold', () => {
-		// 'zzzzzzzz' sums to 976, above the 500 threshold.
-		const { runtime } = makeFakeTeeRuntime({ body: 'zzzzzzzz' })
-
-		expect(onCronTrigger(runtime)).toContain('APPROVE')
+	test('declines with INSUFFICIENT_HISTORY for a new business', () => {
+		const { runtime, reports } = makeFakeTeeRuntime({ snapshot: { ...APPROVABLE, historyDays: 5 } })
+		expect(onUnderwritingTrigger(runtime)).toStartWith('DECLINED')
+		const [, approved, , reason] = decodeReport(reports[0].encodedPayload)
+		expect(approved).toBe(false)
+		expect(reason).toBe(2)
 	})
 
-	test('REJECTs when the confidential score is below the threshold', () => {
-		// 'a' sums to 97, below the 500 threshold.
-		const { runtime } = makeFakeTeeRuntime({ body: 'a' })
+	test('writes the signed report to the UnderwritingRegistry on Sepolia', () => {
+		const { runtime, writes } = makeFakeTeeRuntime()
+		const result = onUnderwritingTrigger(runtime)
 
-		expect(onCronTrigger(runtime)).toContain('REJECT')
+		expect(writes).toHaveLength(1)
+		expect(writes[0].capabilityId).toContain(`ChainSelector:${SEPOLIA_SELECTOR}`)
+		expect(Buffer.from(writes[0].payload.receiver).toString('hex')).toBe(REGISTRY.slice(2))
+		expect(writes[0].payload.gasConfig?.gasLimit).toBe(500000n)
+		expect(result).toContain(`tx=0x${'ab'.repeat(32)}`)
 	})
 
-	test('throws on a non-2xx response and never reaches the DON', () => {
-		const { runtime, reports } = makeFakeTeeRuntime({ statusCode: 401 })
+	test('throws when the write transaction fails', () => {
+		const { runtime } = makeFakeTeeRuntime({ txStatus: TxStatus.REVERTED })
+		expect(() => onUnderwritingTrigger(runtime)).toThrow('Verdict write failed')
+	})
 
-		expect(() => onCronTrigger(runtime)).toThrow('status: 401')
+	test('throws when the registry onReport reverts', () => {
+		const { runtime } = makeFakeTeeRuntime({ receiverStatus: 1 })
+		expect(() => onUnderwritingTrigger(runtime)).toThrow('reverted in UnderwritingRegistry')
+	})
+
+	test('throws on a non-2xx revenue response and never reaches the DON', () => {
+		const { runtime, reports, writes } = makeFakeTeeRuntime({ statusCode: 401 })
+		expect(() => onUnderwritingTrigger(runtime)).toThrow('status: 401')
 		expect(reports).toHaveLength(0)
+		expect(writes).toHaveLength(0)
 	})
 
-	test('does not log the secret or the raw response body', () => {
-		const { runtime, logs } = makeFakeTeeRuntime({ body: 'sensitive-response' })
-
-		onCronTrigger(runtime)
-
+	test('never logs the secret or the raw revenue figures', () => {
+		const { runtime, logs } = makeFakeTeeRuntime()
+		onUnderwritingTrigger(runtime)
 		for (const line of logs) {
 			expect(line).not.toContain(API_TOKEN)
-			expect(line).not.toContain('sensitive-response')
+			expect(line).not.toContain(APPROVABLE.trailing90dTotalUSD)
+			expect(line).not.toContain('volatility')
 		}
 	})
 })
@@ -123,11 +167,8 @@ describe('onCronTrigger', () => {
 describe('initWorkflow', () => {
 	test('registers the cron handler with a Nitro TEE constraint', () => {
 		const handlers = initWorkflow(makeConfig())
-
 		expect(handlers).toHaveLength(1)
-		expect(handlers[0].fn).toBe(onCronTrigger)
-
-		// handlerInTee attaches TEE requirements; cre.handler does not.
+		expect(handlers[0].fn).toBe(onUnderwritingTrigger)
 		expect(handlers[0].requirements).toBeDefined()
 	})
 })

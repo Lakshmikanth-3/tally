@@ -1,4 +1,4 @@
-import { cre, hexToBase64, ok, text, type TeeRuntime } from '@chainlink/cre-sdk'
+import { bytesToHex, cre, getNetwork, hexToBase64, ok, text, TxStatus, type TeeRuntime } from '@chainlink/cre-sdk'
 import { classifyDecline, computeDiscountRate, UnderwritingReasonCode } from './pricing'
 import { encodeAbiParameters, parseAbiParameters } from 'viem'
 import { z } from 'zod'
@@ -9,6 +9,14 @@ export const configSchema = z.object({
 	consoleBaseUrl: z.string(),
 	issuerId: z.string(),
 	secretId: z.string(),
+	// Where the verdict is written on-chain: Tally's UnderwritingRegistry
+	// (contracts/src/UnderwritingRegistry.sol), reached through the chain's
+	// Keystone forwarder.
+	evm: z.object({
+		chainName: z.string(),
+		registryAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+		gasLimit: z.string(),
+	}),
 })
 type Config = z.infer<typeof configSchema>
 
@@ -76,7 +84,7 @@ export const onUnderwritingTrigger = (runtime: TeeRuntime<Config>): string => {
 		[revenue.issuerId, approved, BigInt(recommendedCouponBps), reasonCode],
 	)
 
-	donRuntime
+	const report = donRuntime
 		.report({
 			encodedPayload: hexToBase64(encodedPayload),
 			encoderName: 'evm',
@@ -85,7 +93,35 @@ export const onUnderwritingTrigger = (runtime: TeeRuntime<Config>): string => {
 		})
 		.result()
 
-	return `${approved ? 'APPROVED' : 'DECLINED'} (bps=${recommendedCouponBps}, reason=${reasonCode})`
+	// ── Deliver the signed verdict on-chain. Chain writes always run on the
+	// Workflow DON, which is why this happens after usingTheDons(): the
+	// report carries only the verdict, so nothing confidential is exposed ──
+	const network = getNetwork({ chainFamily: 'evm', chainSelectorName: config.evm.chainName, isTestnet: true })
+	if (!network) {
+		throw new Error(`Unknown chain: ${config.evm.chainName}`)
+	}
+
+	const write = new cre.capabilities.EVMClient(network.chainSelector.selector)
+		.writeReport(donRuntime, {
+			receiver: config.evm.registryAddress,
+			report,
+			gasConfig: { gasLimit: config.evm.gasLimit },
+		})
+		.result()
+
+	if (write.txStatus !== TxStatus.SUCCESS) {
+		throw new Error(`Verdict write failed: ${write.errorMessage || write.txStatus}`)
+	}
+	// The forwarder tx can succeed while the receiver's onReport reverts
+	// (ReceiverContractExecutionStatus.REVERTED = 1) — treat that as a failure.
+	if (write.receiverContractExecutionStatus === 1) {
+		throw new Error('Verdict write reverted in UnderwritingRegistry.onReport')
+	}
+
+	const txHash = bytesToHex(write.txHash ?? new Uint8Array(32))
+	runtime.log(`Verdict written to UnderwritingRegistry ${config.evm.registryAddress}: tx=${txHash}`)
+
+	return `${approved ? 'APPROVED' : 'DECLINED'} (bps=${recommendedCouponBps}, reason=${reasonCode}) tx=${txHash}`
 }
 
 // ─── Workflow Init ──────────────────────────────────────────
