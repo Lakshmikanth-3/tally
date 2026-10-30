@@ -277,7 +277,7 @@ contracts are deployed to Sepolia and that copy is indexed.
 | `SecondaryMarket` | `0.0.10501801` (Hedera) / `0x3d56CC4e…` (Sepolia) |
 | Bond with self-executing coupons | Hedera contract `0.0.10519251` |
 | CRE simulation log + verdict tx | `docs/evidence/cre-simulation.log` · [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085) |
-| CRE workflow ID | **PENDING** (`cre workflow list --registry private`) |
+| CRE workflow ID | `00e48d5e21841e46b17188319ed336cc27e7acf382516c94f8b94cc9a33e23f5` — `tally-underwriting-staging`, private registry, status **PAUSED** |
 | Subgraph | https://thegraph.com/studio/subgraph/tally-register |
 | Test results | `pnpm test`, `cd contracts && forge test`, `cd cre/tally-cre/underwriting && bun test` |
 
