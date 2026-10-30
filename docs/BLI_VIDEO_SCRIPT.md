@@ -124,7 +124,7 @@ mirror-node curl output.
 
 > "Everything I've shown is verifiable without trusting me: the proof page
 > lists every contract, account and endpoint with public explorer links. Over
-> a hundred tests, including nine that check these on-chain claims directly
+> a hundred tests, including twelve that check these on-chain claims directly
 > against the mirror node, Sepolia and The Graph.
 >
 > What doesn't work: redemption at maturity reverts, and I've written up
