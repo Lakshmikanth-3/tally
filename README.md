@@ -53,9 +53,9 @@ Full diagrams, trust boundaries and the KYC-credential flow:
 
 | CRE requirement | Where it lives | Evidence |
 |---|---|---|
-| 1. A CRE Workflow built, simulated or deployed, used as an **orchestration layer** | [`cre/tally-cre/underwriting/workflow.ts`](cre/tally-cre/underwriting/workflow.ts) — the workflow fetches revenue, applies the underwriting policy, reaches DON consensus, and writes the verdict that sets the bond's coupon rate | Deployed live on Chainlink's DON as `tally-underwriting-staging` (`cre workflow list --registry private`); 9 workflow tests pass (`bun test`) |
+| 1. A CRE Workflow built, simulated or deployed, used as an **orchestration layer** | [`cre/tally-cre/underwriting/workflow.ts`](cre/tally-cre/underwriting/workflow.ts) — the workflow fetches revenue, applies the underwriting policy, reaches DON consensus, and writes the verdict that sets the bond's coupon rate | Deployed live on Chainlink's DON as `tally-underwriting-staging` (`cre workflow list --registry private`); 10 workflow tests pass (`bun test`) |
 | 2. Integrates **at least one blockchain with an external API / data source** | External API: Tally's own revenue endpoint ([`/api/business/[issuerId]/revenue`](apps/console/app/api/business/%5BissuerId%5D/revenue/route.ts)), called with a Vault-released bearer secret. Blockchain: `EVMClient.writeReport` → [`contracts/src/UnderwritingRegistry.sol`](contracts/src/UnderwritingRegistry.sol) on Ethereum Sepolia | Registry address: [`0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c`](https://sepolia.etherscan.io/address/0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c) · Chainlink's nodes verified hitting the revenue endpoint (`User-Agent: Go-http-client/1.1`, HTTP 200) |
-| 3. A **successful CRE CLI simulation** or **live CRE deployment** | `cre workflow simulate underwriting --target staging-settings --broadcast` | Simulation log: [`docs/evidence/cre-simulation.log`](docs/evidence/cre-simulation.log) · Sepolia verdict tx: [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085), verdict read back from the registry in [`docs/evidence/onchain-verification.txt`](docs/evidence/onchain-verification.txt) · Live deployment already verified: execution `SUCCESS` with real consensus and a signed report |
+| 3. A **successful CRE CLI simulation** or **live CRE deployment** | `cre workflow simulate underwriting --target staging-settings --broadcast` | Simulation log: [`docs/evidence/cre-simulation.log`](docs/evidence/cre-simulation.log) · Sepolia verdict tx: [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085), verdict read back out of the registry in [`docs/evidence/onchain-verification.txt`](docs/evidence/onchain-verification.txt) (`approved=false, couponBps=760, reasonCode=3` — the policy declining a volatile issuer, not a staged approval) · Live deployment already verified: execution `SUCCESS` with real consensus and a signed report |
 
 **Honest caveat, repeated from below:** the workflow is written for a TEE
 (`cre.handlerInTee`), but Chainlink's confidential-workflows capability fails
@@ -106,6 +106,8 @@ history). New here:
 | `docs/LEGAL_AND_REGULATORY.md` | The legal/compliance analysis law-firm judges are reading for |
 | `docs/ARCHITECTURE.md` | Mermaid system, KYC-gate and settlement diagrams with trust boundaries |
 | `docs/BLI_SUBMISSION.md`, `docs/BLI_VIDEO_SCRIPT.md` | DoraHacks submission text and a ≤3-minute video script |
+| `contracts/deployments/sepolia.json` | Records the deployed registry, its deploy tx and the forwarder it trusts |
+| `docs/evidence/` | The simulation log and an independent read-back of the on-chain verdict |
 | `LICENSE` (MIT) | The repo had SPDX headers but no license file |
 
 ---

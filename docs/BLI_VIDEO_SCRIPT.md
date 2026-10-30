@@ -73,6 +73,12 @@ breakdown.
 > contract and the workflow source and check the decision against the
 > published policy.
 >
+> This issuer is declined. Reason code three: volatility too high. Its revenue
+> scores a hundred against a policy ceiling of forty. That's the policy saying
+> no, in public, with a machine-readable reason an auditor or a regulator can
+> check against published rules — which is the whole point. I didn't pick an
+> issuer that flatters the demo.
+>
 > One caveat I'll state plainly: this workflow is written to run inside a
 > hardware enclave, but Chainlink's confidential capability isn't provisioned
 > for my DON yet. The run is real. It is not confidential today."
@@ -80,11 +86,19 @@ breakdown.
 *On screen:* terminal running `cre workflow simulate … --broadcast`, then the
 Sepolia Etherscan page for the `UnderwritingVerdict` event.
 
+> **Note before recording.** The live verdict for `issuer-corrados-deli-f5bb20`
+> is a *decline* (reason 3, 760 bps) — see `docs/evidence/`. The narration
+> above is written for that. If you instead point
+> `cre/tally-cre/underwriting/config.staging.json` at an issuer whose
+> volatility is under 40, re-run the broadcast and the verdict approves; then
+> cut the "declined" paragraph and say the coupon rate it produced. Do not
+> narrate an approval over a declining transaction.
+
 **Bond issued with KYC (0:25)**
 
-> "That coupon rate sets the terms of a real bond on Hedera. Created, rate
-> set, roles granted, a verifiable credential granting KYC, units minted.
-> Here it is on HashScan.
+> "A passing verdict sets the coupon rate on a real bond on Hedera. Here's one
+> already issued that way. Created, rate set, roles granted, a verifiable
+> credential granting KYC, units minted. Here it is on HashScan.
 >
 > And here's the moment that matters legally: an independent testnet account
 > with no KYC on this bond tries to take delivery — and the token refuses.
@@ -110,7 +124,7 @@ mirror-node curl output.
 
 > "Everything I've shown is verifiable without trusting me: the proof page
 > lists every contract, account and endpoint with public explorer links. Over
-> a hundred tests, including twelve that check these on-chain claims directly
+> a hundred tests, including nine that check these on-chain claims directly
 > against the mirror node, Sepolia and The Graph.
 >
 > What doesn't work: redemption at maturity reverts, and I've written up
@@ -147,4 +161,5 @@ mirror-node curl output.
 - "KYC compliant" / "regulatory compliant" — say "KYC-gated" and "designed for
   compliance."
 - "Redemption works."
+- An approval, if the transaction on screen is a decline.
 - Anything implying the demo businesses are real customers.

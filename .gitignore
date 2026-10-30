@@ -10,7 +10,11 @@ out/
 # Foundry
 contracts/out/
 contracts/cache/
-contracts/broadcast/*/31337/
+# Foundry run artifacts. These recorded simulation addresses that never matched
+# the live deployments, which is worse than having no record — the real ones
+# live in contracts/deployments/.
+contracts/broadcast/
+contracts/cache/
 
 # Subgraph
 subgraph/generated/
