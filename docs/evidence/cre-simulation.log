@@ -1,0 +1,38 @@
+Initializing...
+Loading settings...
+Checking RPC connectivity...
+Compiling workflow...
+✓ Workflow compiled
+✓ Simulation limits enabled
+  HTTP: req=120kb resp=250kb timeout=10s | ConfHTTP: req=125kb resp=500kb timeout=1m30s | Consensus obs=25kb | ChainWrite evm_report=50kb evm_gas=10000000 solana_report=265b solana_cu=300000 | WASM binary=100mb compressed=20mb
+  Binary hash: f33a93b8dafd5d60c6a7fa51f20d721cf22e73ac877a5fd74c74c64c0b5c1bcf
+  Config hash: 9b6b358b0b637839d11962fc5f6c77d220ea6068adae86b025666d04f2d7674d
+2026-10-30T23:08:54Z [SIMULATION] Simulator Initialized
+
+2026-10-30T23:08:54Z [SIMULATION] Running trigger trigger=cron-trigger@1.0.0
+
+┃ Cron scheduler started. Press Enter to skip waiting...
+┃ Next
+
+enter submit
+╭────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Trigger requested TEE Execution your trigger will run in one of the following Tees:                │
+│     - AWS Nitro in us-west-2                                                                       │
+│ The simulator is not a real TEE, and is meant to debug.                                            │
+│ Do not use it for sensitive information.                                                           │
+│ During real execution, user logs for this trigger will not be visible, and will not leave the TEE. │
+│ They are presented in the simulator for debugging only.                                            │
+│                                                                                                    │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+2026-10-30T23:09:01Z [USER LOG] Underwriting complete for issuer-corrados-deli-f5bb20: approved=false bps=760 reason=3
+2026-10-30T23:09:16Z [USER LOG] Verdict written to UnderwritingRegistry 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c: tx=0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085
+
+✓ Workflow Simulation Result:
+"DECLINED (bps=760, reason=3) tx=0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085"
+
+2026-10-30T23:09:16Z [SIMULATION] Execution finished signal received
+2026-10-30T23:09:16Z [SIMULATION] Skipping WorkflowEngineV2
+
+⚠️  Update available! You’re running 1.33.0, but 1.39.0 is the latest.
+Run `cre update` or visit https://github.com/smartcontractkit/cre-cli/releases to upgrade.

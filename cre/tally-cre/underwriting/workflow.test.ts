@@ -28,7 +28,10 @@ type FakeOptions = {
 	statusCode?: number
 	snapshot?: object
 	txStatus?: TxStatus
-	receiverStatus?: number
+	// RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS = 0, REVERTED = 1. The field is
+	// optional in the protobuf, so `null` here stands for "the node reported no
+	// status at all" — which the handler must not read as success.
+	receiverStatus?: number | null
 }
 
 // The public test surface does not ship a TEE runtime factory, so we stand up
@@ -39,7 +42,7 @@ const makeFakeTeeRuntime = ({
 	statusCode = 200,
 	snapshot = APPROVABLE,
 	txStatus = TxStatus.SUCCESS,
-	receiverStatus,
+	receiverStatus = 0,
 }: FakeOptions = {}) => {
 	const capturedHeaders: string[] = []
 	const reports: { encodedPayload: string }[] = []
@@ -56,7 +59,7 @@ const makeFakeTeeRuntime = ({
 			return {
 				result: () => ({
 					txStatus,
-					receiverContractExecutionStatus: receiverStatus,
+					receiverContractExecutionStatus: receiverStatus ?? undefined,
 					txHash: new Uint8Array(32).fill(0xab),
 				}),
 			}
@@ -143,7 +146,15 @@ describe('onUnderwritingTrigger', () => {
 
 	test('throws when the registry onReport reverts', () => {
 		const { runtime } = makeFakeTeeRuntime({ receiverStatus: 1 })
-		expect(() => onUnderwritingTrigger(runtime)).toThrow('reverted in UnderwritingRegistry')
+		expect(() => onUnderwritingTrigger(runtime)).toThrow('Verdict not stored by UnderwritingRegistry')
+	})
+
+	// Regression: a real --broadcast run mined the forwarder tx with status 1
+	// while onReport ran out of the gas the forwarder passed on, so the verdict
+	// was never stored. Only an explicit SUCCESS counts as a stored verdict.
+	test('throws when no receiver execution status is reported at all', () => {
+		const { runtime } = makeFakeTeeRuntime({ receiverStatus: null })
+		expect(() => onUnderwritingTrigger(runtime)).toThrow('Verdict not stored by UnderwritingRegistry')
 	})
 
 	test('throws on a non-2xx revenue response and never reaches the DON', () => {

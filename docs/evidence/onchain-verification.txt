@@ -1,0 +1,21 @@
+# Independent verification of the verdict written by docs/evidence/cre-simulation.log
+# Captured 2026-10-30T17:42:02Z. Anyone can re-run these against public Sepolia.
+
+$ cast receipt 0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085 --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+blockNumber          12028219
+gasUsed              186231
+status               1 (success)
+to                   0x15fC6ae953E024d975e77382eEeC56A9101f9F88
+
+$ cast call 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c 'verdictCount()(uint256)'
+2
+
+$ cast call 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c 'latestVerdict(string)((bool,uint256,uint8,uint256,bool))' 'issuer-corrados-deli-f5bb20'
+# fields: approved, couponBps, reasonCode, timestamp, exists
+(false, 760, 3, 1793381952 [1.793e9], true)
+
+# reasonCode 3 = VOLATILITY_TOO_HIGH; 760 bps = 400 + 4*(volatility 100 - 10)
+
+$ cast sig-event 'UnderwritingVerdict(string,bool,uint256,uint8,uint256)'
+0x326ffcc55d545f2de30628b0b9480b67a07132ab29cbc7bd1ff13fb4f76cb935
+# that topic0 appears in the receipt's logs, emitted by 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c

@@ -6,6 +6,6 @@
   "evm": {
     "chainName": "ethereum-testnet-sepolia",
     "registryAddress": "0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c",
-    "gasLimit": "500000"
+    "gasLimit": "3000000"
   }
 }

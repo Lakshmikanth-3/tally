@@ -234,7 +234,7 @@ come from.
 |---|---|
 | 1. Build, simulate or deploy a CRE Workflow used as an orchestration layer | `cre/tally-cre/underwriting/workflow.ts` — fetches revenue, applies the policy, reaches DON consensus, writes the verdict that sets the coupon rate. Deployed live as `tally-underwriting-staging` on Chainlink's private registry; 9 workflow tests pass. |
 | 2. Integrate at least one blockchain with an external API / data source | **External API:** Tally's revenue endpoint, called from the workflow with a Vault-released bearer secret — Chainlink's nodes verified hitting it (`User-Agent: Go-http-client/1.1`, HTTP 200). **Blockchain:** `EVMClient.writeReport` → `UnderwritingRegistry` on Ethereum Sepolia (`contracts/src/UnderwritingRegistry.sol`, 9 Foundry tests). Registry address: [`0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c`](https://sepolia.etherscan.io/address/0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c) |
-| 3. Successful CRE CLI simulation or live CRE deployment | **Live deployment:** execution `SUCCESS` with real consensus and a signed report. **Simulation with broadcast:** `cre workflow simulate underwriting --target staging-settings --broadcast` → log at `docs/evidence/cre-simulation.log`, Sepolia verdict tx **PENDING** |
+| 3. Successful CRE CLI simulation or live CRE deployment | **Live deployment:** execution `SUCCESS` with real consensus and a signed report. **Simulation with broadcast:** `cre workflow simulate underwriting --target staging-settings --broadcast` → log at `docs/evidence/cre-simulation.log`, Sepolia verdict tx [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085). The stored verdict is read back from the contract in `docs/evidence/onchain-verification.txt` — the tx receipt alone does not prove the write landed. |
 
 Bounty use case fit: **tokenized asset servicing and lifecycle management**
 (the verdict sets and records the bond's coupon terms) and **automated risk
@@ -276,7 +276,7 @@ contracts are deployed to Sepolia and that copy is indexed.
 | `SettlementAnchor` | `0.0.10501789` (Hedera) / `0xFa5FE1d6…` (Sepolia) |
 | `SecondaryMarket` | `0.0.10501801` (Hedera) / `0x3d56CC4e…` (Sepolia) |
 | Bond with self-executing coupons | Hedera contract `0.0.10519251` |
-| CRE simulation log + verdict tx | **PENDING** |
+| CRE simulation log + verdict tx | `docs/evidence/cre-simulation.log` · [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085) |
 | CRE workflow ID | **PENDING** (`cre workflow list --registry private`) |
 | Subgraph | https://thegraph.com/studio/subgraph/tally-register |
 | Test results | `pnpm test`, `cd contracts && forge test`, `cd cre/tally-cre/underwriting && bun test` |

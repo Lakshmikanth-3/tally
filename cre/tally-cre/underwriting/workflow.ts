@@ -112,10 +112,18 @@ export const onUnderwritingTrigger = (runtime: TeeRuntime<Config>): string => {
 	if (write.txStatus !== TxStatus.SUCCESS) {
 		throw new Error(`Verdict write failed: ${write.errorMessage || write.txStatus}`)
 	}
-	// The forwarder tx can succeed while the receiver's onReport reverts
-	// (ReceiverContractExecutionStatus.REVERTED = 1) — treat that as a failure.
-	if (write.receiverContractExecutionStatus === 1) {
-		throw new Error('Verdict write reverted in UnderwritingRegistry.onReport')
+	// The forwarder tx can succeed while the receiver's onReport does not: it
+	// can revert, or run out of the gas the forwarder passes on. Either way the
+	// forwarder's own tx is mined with status 1 and the verdict is simply never
+	// stored, so the tx receipt alone does not prove the write landed.
+	// RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS = 0, REVERTED = 1, and the
+	// field is optional, so anything that is not an explicit SUCCESS is treated
+	// as a failure rather than assumed good.
+	if (write.receiverContractExecutionStatus !== 0) {
+		throw new Error(
+			`Verdict not stored by UnderwritingRegistry.onReport ` +
+				`(receiverContractExecutionStatus=${write.receiverContractExecutionStatus})`,
+		)
 	}
 
 	const txHash = bytesToHex(write.txHash ?? new Uint8Array(32))
