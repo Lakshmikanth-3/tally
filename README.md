@@ -2,7 +2,7 @@
 
 A shop's verified revenue becomes a short bond. Underwritten in private, priced in public, settles itself.
 
-Originally built for ETHOnline 2026 (Hedera · Chainlink · The Graph).
+
 
 **→ [DEMO.md](DEMO.md) is the guided walkthrough** — what to open, what each
 thing proves, how to verify it independently, and what doesn't work.
