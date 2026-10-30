@@ -96,6 +96,12 @@ export async function listStripeCharges(stripeAccountId: string, sinceSeconds?: 
 /// True as long as the platform is authenticated with a real Stripe TEST
 /// MODE secret key (`sk_test_...`) — Stripe itself, not a flag Tally
 /// invents, determines whether every call this module makes is test-mode.
+/// Whether this deployment can start the Connect OAuth handshake at all, so
+/// the UI can say so instead of linking to a route that can only fail.
+export function isStripeConnectConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_CONNECT_CLIENT_ID);
+}
+
 export function isStripeTestMode(): boolean {
   // Deliberately does not use requireEnv. This is read while rendering the
   // business page, which must stay viewable on a deployment that has no

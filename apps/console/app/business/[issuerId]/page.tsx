@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { getBusiness, getRevenueSnapshot, getStripeAccountId } from '@/lib/business';
 import { getLatestBond } from '@/lib/bonds';
 import { computeBondId } from '@/lib/secondary-market';
-import { getStripeAccountCountry, isStripeTestMode } from '@/lib/stripe';
+import { getStripeAccountCountry, isStripeConnectConfigured, isStripeTestMode } from '@/lib/stripe';
 import BondPanel from './BondPanel';
 import LifecycleTimeline from './LifecycleTimeline';
 import UnderwritingHistory from './UnderwritingHistory';
@@ -20,6 +20,7 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
   const stripeAccountId = await getStripeAccountId(issuerId);
   const latestBond = await getLatestBond(issuerId);
   const testMode = isStripeTestMode();
+  const stripeConfigured = isStripeConnectConfigured();
   const accountCountry = stripeAccountId ? await getStripeAccountCountry(stripeAccountId) : null;
   // Stripe blocks USD invoice payment on India-domiciled accounts under a
   // real RBI export rule, which is exactly what the test-mode revenue
@@ -82,9 +83,15 @@ export default async function BusinessPage({ params }: { params: Promise<{ issue
         ) : (
           <>
             <p>No payment processor connected yet.</p>
-            <a className="button-link" href={`/api/business/${issuerId}/stripe/authorize`}>
-              Connect Stripe
-            </a>
+            {stripeConfigured ? (
+              <a className="button-link" href={`/api/business/${issuerId}/stripe/authorize`}>
+                Connect Stripe
+              </a>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                Stripe Connect is not enabled on this hosted demo.
+              </p>
+            )}
           </>
         )}
       </section>
