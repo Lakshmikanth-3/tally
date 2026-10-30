@@ -2,10 +2,113 @@
 
 A shop's verified revenue becomes a short bond. Underwritten in private, priced in public, settles itself.
 
-Built for ETHOnline 2026 (Hedera · Chainlink · The Graph).
+Originally built for ETHOnline 2026 (Hedera · Chainlink · The Graph).
 
 **→ [DEMO.md](DEMO.md) is the guided walkthrough** — what to open, what each
 thing proves, how to verify it independently, and what doesn't work.
+
+---
+
+## BLI Legal Tech Hackathon 2 submission
+
+**Verified revenue becomes a KYC-gated tokenized bond — underwritten by a
+Chainlink CRE workflow that writes its verdict on-chain, serviced by coupons
+that execute themselves, and recorded in a public repayment register.**
+
+- **Tracks:** Real World Assets (RWA) · LegalTech & RegTech
+- **Bounty:** Chainlink — "Best workflow with CRE"
+- **Legal design:** **[docs/LEGAL_AND_REGULATORY.md](docs/LEGAL_AND_REGULATORY.md)** — written for a lawyer reader
+- **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Submission text:** [docs/BLI_SUBMISSION.md](docs/BLI_SUBMISSION.md) · **Video script:** [docs/BLI_VIDEO_SCRIPT.md](docs/BLI_VIDEO_SCRIPT.md)
+- **Live demo:** https://tally-eight-jet.vercel.app/ · **Video:** _PENDING — not yet recorded_
+- **License:** [MIT](LICENSE)
+
+> **This is a testnet prototype.** Not an offer of securities, not a regulated
+> financial service, no regulatory approval. See the disclaimer at the top of
+> the legal doc.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    B["Small business"] -->|"Stripe Connect<br/>or manual"| API["Tally console<br/>revenue API"]
+    API -.->|"bearer secret<br/>3 aggregate figures"| TEE["Chainlink CRE<br/>handlerInTee<br/>⚠ enclave not provisioned"]
+    TEE -->|"verdict only"| DON["Workflow DON<br/>consensus + signed report"]
+    DON -->|"writeReport via<br/>Keystone forwarder"| REG["UnderwritingRegistry<br/>Ethereum Sepolia"]
+    REG -->|"coupon rate"| ATS["Hedera ATS bond<br/>KYC + control list"]
+    ATS --> SCHED["Scheduled Transactions<br/>coupons self-execute"]
+    SCHED -->|"consensus timestamp"| ANCH["SettlementAnchor<br/>confirm, then anchor"]
+    ANCH --> GRAPH["The Graph<br/>public repayment register"]
+    ATS -->|"transfer attempt"| GATE{"KYC granted<br/>+ on control list?"}
+    GATE -->|"no"| REJ["reverted on-chain:<br/>transfer restricted"]
+    GATE -->|"yes"| OK["transfer settles"]
+
+    classDef disabled stroke-dasharray: 5 5,color:#b45309
+    class TEE disabled
+```
+
+Full diagrams, trust boundaries and the KYC-credential flow:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+### Chainlink CRE bounty — requirement by requirement
+
+| CRE requirement | Where it lives | Evidence |
+|---|---|---|
+| 1. A CRE Workflow built, simulated or deployed, used as an **orchestration layer** | [`cre/tally-cre/underwriting/workflow.ts`](cre/tally-cre/underwriting/workflow.ts) — the workflow fetches revenue, applies the underwriting policy, reaches DON consensus, and writes the verdict that sets the bond's coupon rate | Deployed live on Chainlink's DON as `tally-underwriting-staging` (`cre workflow list --registry private`); 9 workflow tests pass (`bun test`) |
+| 2. Integrates **at least one blockchain with an external API / data source** | External API: Tally's own revenue endpoint ([`/api/business/[issuerId]/revenue`](apps/console/app/api/business/%5BissuerId%5D/revenue/route.ts)), called with a Vault-released bearer secret. Blockchain: `EVMClient.writeReport` → [`contracts/src/UnderwritingRegistry.sol`](contracts/src/UnderwritingRegistry.sol) on Ethereum Sepolia | Registry address: _PENDING deploy_ · Chainlink's nodes verified hitting the revenue endpoint (`User-Agent: Go-http-client/1.1`, HTTP 200) |
+| 3. A **successful CRE CLI simulation** or **live CRE deployment** | `cre workflow simulate underwriting --target staging-settings --broadcast` | Simulation log: _PENDING_ (`docs/evidence/cre-simulation.log`) · Sepolia verdict tx: _PENDING_ · Live deployment already verified: execution `SUCCESS` with real consensus and a signed report |
+
+**Honest caveat, repeated from below:** the workflow is written for a TEE
+(`cre.handlerInTee`), but Chainlink's confidential-workflows capability fails
+on this deployment with `cannot validate enclave config: DON members not set`.
+The run is real; it is **not** confidential today.
+
+### Legal & Regulatory Design
+
+- **The bond is treated as a debt security**, not designed around securities
+  law. It is issued through Hedera's Asset Tokenization Studio — a permissioned
+  ERC-3643-style security token, not a free-floating ERC-20.
+- **KYC is enforced by the token, on-chain.** Every transfer checks the
+  recipient's KYC status and control-list membership inside the ATS transfer
+  function. Tally's `SecondaryMarket` deliberately does *not* pre-check, so a
+  rejection proves real enforcement. **Demonstrated live:** an independent
+  account with no KYC was refused with `transfer restricted: counterparty not
+  compliant`, on the same order a KYC'd account then filled.
+- **Verifiable credentials keep PII off the ledger.** KYC is granted by a real
+  ECDSA verifiable credential anchored to public DID/revocation registries;
+  only a status flag reaches the chain. **The credential is self-signed by
+  Tally's custodian key — the mechanism is real, the identity assurance is
+  zero.**
+- **Data minimisation by construction.** Raw revenue never goes on-chain: only
+  `(issuerId, approved, couponBps, reasonCode)` is published. This maps to
+  GDPR Art. 5(1)(c) and India's DPDP Act 2023, and protects the business's
+  financials as a trade secret.
+- **Role separation** — issuer, rate manager, control-list manager, KYC/SSI
+  manager, maturity redeemer — are distinct ATS roles, the shape a transfer
+  agent and paying agent would occupy.
+- **An evidentiary trail that doesn't require trusting Tally:** verdicts signed
+  by DON consensus and written on-chain; payment times taken from Hedera
+  consensus timestamps, which no party can backdate; confirm-then-anchor
+  lifecycle events; a public per-issuer repayment register.
+- **Open questions stated, not papered over:** jurisdiction and offering
+  exemptions, issuer of record, investor accreditation, default remedies, and
+  the status of an algorithmic credit decision under GDPR Art. 22.
+
+### What was added for this hackathon
+
+Everything else in this repository predates it (ETHOnline 2026 — see the git
+history). New here:
+
+| Added | Why |
+|---|---|
+| `contracts/src/UnderwritingRegistry.sol` + 9 Foundry tests | The CRE verdict had no on-chain destination; this closes CRE requirement #2 |
+| On-chain write in `cre/tally-cre/underwriting/workflow.ts` (`EVMClient.writeReport`) | The workflow previously stopped at `donRuntime.report(...)` |
+| Rewritten `cre/tally-cre/underwriting/workflow.test.ts` | The old tests still targeted a removed template handler |
+| `docs/LEGAL_AND_REGULATORY.md` | The legal/compliance analysis law-firm judges are reading for |
+| `docs/ARCHITECTURE.md` | Mermaid system, KYC-gate and settlement diagrams with trust boundaries |
+| `docs/BLI_SUBMISSION.md`, `docs/BLI_VIDEO_SCRIPT.md` | DoraHacks submission text and a ≤3-minute video script |
+| `LICENSE` (MIT) | The repo had SPDX headers but no license file |
+
+---
 
 ## What this is
 
