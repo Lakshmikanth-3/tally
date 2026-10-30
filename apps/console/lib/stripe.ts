@@ -97,7 +97,14 @@ export async function listStripeCharges(stripeAccountId: string, sinceSeconds?: 
 /// MODE secret key (`sk_test_...`) — Stripe itself, not a flag Tally
 /// invents, determines whether every call this module makes is test-mode.
 export function isStripeTestMode(): boolean {
-  return requireEnv('STRIPE_SECRET_KEY').startsWith('sk_test_');
+  // Deliberately does not use requireEnv. This is read while rendering the
+  // business page, which must stay viewable on a deployment that has no
+  // Stripe credentials at all (the hosted demo is one) — throwing here turned
+  // the whole page into a 500. Absent key means "not test mode", so every
+  // caller that gates on it fails closed: no TEST MODE badge, and the
+  // synthetic-transaction generator refuses rather than running against an
+  // unknown account.
+  return (process.env.STRIPE_SECRET_KEY ?? '').startsWith('sk_test_');
 }
 
 /// The connected account's real, Stripe-reported country. Surfaced in the
