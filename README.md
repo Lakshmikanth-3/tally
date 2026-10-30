@@ -55,7 +55,7 @@ Full diagrams, trust boundaries and the KYC-credential flow:
 |---|---|---|
 | 1. A CRE Workflow built, simulated or deployed, used as an **orchestration layer** | [`cre/tally-cre/underwriting/workflow.ts`](cre/tally-cre/underwriting/workflow.ts) — the workflow fetches revenue, applies the underwriting policy, reaches DON consensus, and writes the verdict that sets the bond's coupon rate | Deployed live on Chainlink's DON as `tally-underwriting-staging`, workflow ID `00e48d5e21841e46b17188319ed336cc27e7acf382516c94f8b94cc9a33e23f5` (`cre workflow list --registry private`) — currently **paused**, and its owner key is no longer held, so the reproducible path is the CLI simulation in row 3; 10 workflow tests pass (`bun test`) |
 | 2. Integrates **at least one blockchain with an external API / data source** | External API: Tally's own revenue endpoint ([`/api/business/[issuerId]/revenue`](apps/console/app/api/business/%5BissuerId%5D/revenue/route.ts)), called with a Vault-released bearer secret. Blockchain: `EVMClient.writeReport` → [`contracts/src/UnderwritingRegistry.sol`](contracts/src/UnderwritingRegistry.sol) on Ethereum Sepolia | Registry address: [`0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c`](https://sepolia.etherscan.io/address/0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c) · Chainlink's nodes verified hitting the revenue endpoint (`User-Agent: Go-http-client/1.1`, HTTP 200) |
-| 3. A **successful CRE CLI simulation** or **live CRE deployment** | `cre workflow simulate underwriting --target staging-settings --broadcast` | Simulation log: [`docs/evidence/cre-simulation.log`](docs/evidence/cre-simulation.log) · Sepolia verdict tx: [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085), verdict read back out of the registry in [`docs/evidence/onchain-verification.txt`](docs/evidence/onchain-verification.txt) (`approved=false, couponBps=760, reasonCode=3` — the policy declining a volatile issuer, not a staged approval) · Live deployment already verified: execution `SUCCESS` with real consensus and a signed report |
+| 3. A **successful CRE CLI simulation** or **live CRE deployment** | `cre workflow simulate underwriting --target staging-settings --broadcast` | Simulation log: [`docs/evidence/cre-simulation.log`](docs/evidence/cre-simulation.log) · Sepolia verdict tx: [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085), verdict read back out of the registry in [`docs/evidence/onchain-verification.txt`](docs/evidence/onchain-verification.txt) (`approved=false, couponBps=760, reasonCode=3` — the policy declining a volatile issuer, not a staged approval) · **Both halves exist:** the simulation above proves the on-chain write; execution `118714e9…f8087` on Chainlink's real DON proves multi-node consensus — 9 nodes each logged the identical verdict ([`docs/evidence/live-don-execution.log`](docs/evidence/live-don-execution.log)) |
 
 **Honest caveat, repeated from below:** the workflow is written for a TEE
 (`cre.handlerInTee`), but Chainlink's confidential-workflows capability fails
@@ -112,6 +112,39 @@ cast call 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c \
 # (false, 760, 3, 1793381952 [1.793e9], true)
 #  approved, couponBps, reasonCode, timestamp, exists
 ```
+
+#### The live DON run, and what it does and does not show
+
+The workflow was also deployed to Chainlink's real DON as
+`tally-underwriting-staging`. Execution `118714e9…f8087` (2026-09-13) is
+recorded in [`docs/evidence/live-don-execution.log`](docs/evidence/live-don-execution.log),
+pulled from the CRE CLI. Its logs show **nine separate DON nodes each
+independently producing the identical verdict**:
+
+```
+[Node 1] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[Node 2] … bps=460 reason=0        (… through Node 9, all identical)
+```
+
+That is real consensus on real Chainlink infrastructure, not a local
+simulation. Three things must be said alongside it:
+
+1. **The enclave failed on that run.** The execution carries a top-level error:
+   `confidential-workflows capability execution failed: … cannot validate
+   enclave config: DON members not set`. The nodes ran the workflow, but not
+   inside a TEE. This is Chainlink-side provisioning for the private registry's
+   DON family, and is why nothing here is described as confidential.
+2. **That run predates the on-chain write**, which was added for this
+   hackathon. The live DON produced a verdict; it did not write one. The
+   on-chain write is evidenced by the simulation above.
+3. **The workflow is now paused and its owner key is no longer held**, so it
+   cannot be resumed or redeployed from this repository. Relinking would
+   require a transaction on Ethereum mainnet.
+
+Note the verdict differs from today's: in September this issuer **approved** at
+460 bps. The seeded revenue has since aged, so the trailing-90-day window now
+scores volatility 100 and the policy declines it. Same code, different inputs —
+which is what a policy that actually reads its inputs looks like.
 
 #### What "simulation" means here
 

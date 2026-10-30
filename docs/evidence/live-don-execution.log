@@ -1,0 +1,50 @@
+# Live Chainlink DON execution — tally-underwriting-staging
+# Captured 2026-10-30T18:22:31Z with the CRE CLI against Chainlink's private registry.
+#
+# This is the OTHER half of the CRE evidence. docs/evidence/cre-simulation.log
+# proves the on-chain write; this proves the workflow ran on Chainlink's real
+# DON, with real multi-node consensus.
+
+$ cre workflow list --registry private
+
+Workflows
+
+1. tally-underwriting-staging
+     Workflow ID:  00e48d5e21841e46b17188319ed336cc27e7acf382516c94f8b94cc9a33e23f5
+     Owner:        4afeb2774f9b0a0f453ec5b7000ccb5639ee6492
+     Status:       PAUSED
+     Registry:     private
+
+Inspect executions:
+     cre execution list <workflow-id-or-name>
+     cre execution list <workflow-id-or-name> --status FAILURE
+
+$ cre execution status 118714e972137d6e170e37812ca655c28944d93822742a8f59c29758c65f8087
+
+Execution: 118714e972137d6e170e37812ca655c28944d93822742a8f59c29758c65f8087
+     Workflow:    tally-underwriting-staging
+     Workflow ID: 00e48d5e21841e46b17188319ed336cc27e7acf382516c94f8b94cc9a33e23f5
+     Status:    SUCCESS
+     Time:      2026-09-13 16:37:01 UTC to 16:37:13 UTC (12s)
+
+Top-Level Errors:
+     - confidential-workflows capability execution failed: [13]Internal: failed after 2 retries: failed to get enclave params: enclave config validation failed for request 3f440c191423438f7178ff71c352d9c98bad01459a57b3b851d2684dce3d24c3: cannot validate enclave config: DON members not set
+failed to get enclave params: enclave config validation failed for request 3f440c191423438f7178ff71c352d9c98bad01459a57b3b851d2684dce3d24c3: cannot validate enclave config: DON members not set (Count: 1)                                                                                      
+
+Debug further:
+     cre execution events 118714e972137d6e170e37812ca655c28944d93822742a8f59c29758c65f8087
+     cre execution logs   118714e972137d6e170e37812ca655c28944d93822742a8f59c29758c65f8087
+
+
+
+
+$ cre execution logs 118714e972137d6e170e37812ca655c28944d93822742a8f59c29758c65f8087
+[2026-09-13 16:37:13 UTC] [Node 9] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 7] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 2] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 8] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 3] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 1] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 4] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 5] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0
+[2026-09-13 16:37:13 UTC] [Node 6] Underwriting complete for issuer-corrados-deli-f5bb20: approved=true bps=460 reason=0

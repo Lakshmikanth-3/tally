@@ -9,6 +9,7 @@ from the simulator's progress bar so the log is readable as text.
 |---|---|
 | `cre-simulation.log` | Full output of `cre workflow simulate underwriting --target staging-settings --broadcast`, run 2026-10-30. Ends with the Sepolia transaction that delivered the verdict to `UnderwritingRegistry`. |
 | `onchain-verification.txt` | The same verdict read back out of the contract over a public Sepolia RPC, so the claim does not rest on the simulator's own word. |
+| `live-don-execution.log` | Execution `118714e9…f8087` on Chainlink's real DON, pulled from the CRE CLI: nine nodes each logging the identical verdict. Also shows the enclave failing with `DON members not set`, and that the run predates the on-chain write. |
 
 ## What the run produced
 
