@@ -62,6 +62,73 @@ Full diagrams, trust boundaries and the KYC-credential flow:
 on this deployment with `cannot validate enclave config: DON members not set`.
 The run is real; it is **not** confidential today.
 
+### Proof: the verdict reached the chain
+
+Every figure below was read back out of public infrastructure, not copied from
+a log. Raw capture: [`docs/evidence/`](docs/evidence/).
+
+| What | Value |
+|---|---|
+| Network | Ethereum Sepolia (chain `11155111`, selector `16015286601757825753`) |
+| `UnderwritingRegistry` | [`0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c`](https://sepolia.etherscan.io/address/0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c) |
+| Deploy tx | [`0x8bc4e0de…08fe2a`](https://sepolia.etherscan.io/tx/0x8bc4e0de57c08d6ca4a3fbcf61401da7e849d7caf44b7853fd904533ae08fe2a) · block 12,027,293 |
+| Verdict tx | [`0xa58ea689…f4e085`](https://sepolia.etherscan.io/tx/0xa58ea689f0b8f3f4cfbcb1f71ca5ccb241a80f0da734d880a1a09fcf94f4e085) · block 12,028,219 |
+| Called by | Keystone forwarder [`0x15fC6ae9…1f9F88`](https://sepolia.etherscan.io/address/0x15fC6ae953E024d975e77382eEeC56A9101f9F88) — the only address `onReport` accepts |
+| Event | `UnderwritingVerdict` · topic0 `0x326ffcc5…cb935` |
+| Stored verdict | `approved=false · couponBps=760 · reasonCode=3 · exists=true` |
+| CRE workflow | `tally-underwriting-staging`, ID `00e48d5e…e23f5` (private registry, **paused**) |
+| Workflow build | binary `f33a93b8…c1bcf` · config `9b6b358b…7674d` |
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant API as Tally revenue API<br/>(bearer secret from Vault)
+    participant WF as CRE workflow<br/>handlerInTee
+    participant DON as Workflow DON
+    participant FWD as Keystone forwarder<br/>0x15fC6ae9…
+    participant REG as UnderwritingRegistry<br/>0xFde2B318…
+
+    WF->>API: GET /revenue
+    API-->>WF: 90d total · volatility · history days
+    Note over WF: policy applied in-workflow;<br/>raw figures never leave
+    WF->>DON: usingTheDons() — verdict only
+    DON->>DON: consensus · sign report
+    DON->>FWD: writeReport(receiver, report, gas 3,000,000)
+    FWD->>REG: onReport(metadata, report)
+    REG->>REG: decode · store · emit UnderwritingVerdict
+    REG-->>FWD: ok
+    Note over FWD,REG: tx 0xa58ea689… · verdictCount 1 → 2
+```
+
+**Verify it yourself**, against public Sepolia — no access to anything of mine
+required:
+
+```bash
+cast call 0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c \
+  'latestVerdict(string)((bool,uint256,uint8,uint256,bool))' \
+  'issuer-corrados-deli-f5bb20' \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+
+# (false, 760, 3, 1793381952 [1.793e9], true)
+#  approved, couponBps, reasonCode, timestamp, exists
+```
+
+Reason code `3` is `VOLATILITY_TOO_HIGH`: the issuer's revenue scores 100
+against a policy ceiling of 40. **The live verdict is a decline, and that is
+the correct answer** — the policy in `packages/underwriting` runs for real
+rather than being staged to produce a flattering approval. 760 bps follows the
+published formula, 400 + 4 × (100 − 10). The decision is reproducible by anyone
+who reads the policy and the stored inputs.
+
+> **A green receipt does not prove a CRE write landed.** The first broadcast
+> run returned a transaction hash and a mined receipt with `status: 1`, yet
+> `verdictCount` was still `0` — `onReport` had exhausted the gas the forwarder
+> passes on, so nothing was stored. The gas limit is now 3,000,000 and the
+> workflow treats anything other than an explicit
+> `RECEIVER_CONTRACT_EXECUTION_STATUS_SUCCESS` as a failure
+> ([regression test](cre/tally-cre/underwriting/workflow.test.ts)). This is why
+> the evidence reads contract *state* back rather than citing a receipt.
+
 ### Legal & Regulatory Design
 
 - **The bond is treated as a debt security**, not designed around securities
@@ -170,8 +237,9 @@ Everything downstream of that revenue number — the Chainlink CRE workflow's un
   as an indexable network (see `FEEDBACK/THEGRAPH.md`).
 - **Subgraph** — deployed live: https://thegraph.com/studio/subgraph/tally-register,
   indexing lifecycle events from the Sepolia deployment above.
-- **Chainlink CRE workflow** (`cre/tally-cre`) — **deployed live and
-  executing** on Chainlink's real DON as `tally-underwriting-staging`. It
+- **Chainlink CRE workflow** (`cre/tally-cre`) — deployed on Chainlink's real
+  DON as `tally-underwriting-staging` (workflow ID `00e48d5e…e23f5`), now
+  **paused**, and its owner key is no longer held. It
   fetches a business's real revenue from the console's API, applies the real
   underwriting policy, and reports only the verdict. Verified from both
   sides: Chainlink's nodes hit the revenue endpoint (`User-Agent:
