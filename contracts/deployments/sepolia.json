@@ -1,0 +1,25 @@
+{
+  "network": "ethereum-sepolia",
+  "chainId": 11155111,
+  "chainSelector": "16015286601757825753",
+  "contracts": {
+    "UnderwritingRegistry": {
+      "address": "0xFde2B3180a8D5a72a57d5c4AE0485cBcEF23362c",
+      "deployTx": "0x8bc4e0de57c08d6ca4a3fbcf61401da7e849d7caf44b7853fd904533ae08fe2a",
+      "block": 12027293,
+      "deployer": "0x5BbDca3ef23B2748e593b56aebe079216BD4Fb59",
+      "constructorArgs": {
+        "forwarder": "0x15fC6ae953E024d975e77382eEeC56A9101f9F88"
+      },
+      "note": "Chainlink CRE verdict receiver. The forwarder is Sepolia's MockKeystoneForwarder, which is what `cre workflow simulate --broadcast` calls. Point it at the production KeystoneForwarder 0xF8344CFd5c43616a4366C34E3EEE75af79a74482 with setForwarder() before a live DON deployment."
+    },
+    "SettlementAnchor": {
+      "address": "0xFa5FE1d656B9d2D382D9Fc717Bd22c1f79Add9f4",
+      "note": "Indexed by the subgraph. Deployed before this hackathon."
+    },
+    "SecondaryMarket": {
+      "address": "0x3d56CC4eEFe9c51957F2B34096e29Ef0B4fc84d4",
+      "note": "Deployed before this hackathon."
+    }
+  }
+}
