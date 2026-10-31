@@ -105,9 +105,8 @@ function RunPipeline({ running, outcome }: { running: boolean; outcome: 'approve
       </div>
       <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', margin: '10px 0 0' }}>
         This run applies the underwriting policy in Tally&apos;s backend. The Chainlink CRE workflow runs the identical
-        policy (same <code>@tally/underwriting</code> package) against this same authenticated revenue API from inside a
-        real TEE — verified with <code>cre workflow simulate</code>; live TEE deploy is pending Chainlink&apos;s
-        private-beta access review.
+        policy (same <code>@tally/underwriting</code> package) against this same authenticated revenue API. It is written for a TEE, but the
+        enclave is not running yet, so runs are not confidential today.
       </p>
     </div>
   );

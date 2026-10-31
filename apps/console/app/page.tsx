@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic';
 const PIPELINE = [
   { icon: <StoreIcon />, label: 'Business', sub: 'Real revenue' },
   { icon: <CardIcon />, label: 'Stripe', sub: 'Connect + sync' },
-  { icon: <LockIcon />, label: 'Chainlink CRE', sub: 'Read privately' },
-  { icon: <ShieldIcon />, label: 'Confidential TEE', sub: 'Verdict only' },
+  { icon: <LockIcon />, label: 'Chainlink CRE', sub: 'Applies the policy' },
+  { icon: <ShieldIcon />, label: 'TEE (not yet running)', sub: 'Verdict only on-chain' },
   { icon: <ChainIcon />, label: 'Hedera ATS', sub: 'Bond issued' },
   { icon: <ClockIcon />, label: 'Scheduled', sub: 'No keeper' },
   { icon: <ChartIcon />, label: 'The Graph', sub: 'Public record' },
@@ -20,8 +20,8 @@ const PIPELINE = [
 const FEATURES = [
   {
     icon: <LockIcon size={24} />,
-    title: 'Underwritten in private',
-    body: "A business's real revenue is read once, inside a Chainlink Confidential Workflow's TEE. Only a verdict — approve or decline, and a coupon rate — ever leaves the enclave.",
+    title: 'Only the verdict goes on-chain',
+    body: "A Chainlink CRE workflow reads aggregate revenue and applies the policy. Only a verdict, coupon rate and reason code go on-chain. It is written for a TEE, but the enclave is not running yet, so this is not confidential today.",
   },
   {
     icon: <CoinIcon size={24} />,
@@ -56,7 +56,7 @@ export default async function HomePage() {
             A shop&apos;s verified revenue becomes a <span className="accent-text">short bond</span>.
           </h1>
           <p className="hero-sub fade-up" style={{ ['--stagger' as string]: 2 }}>
-            Underwritten in private, priced in public, settles itself. Chainlink reads the revenue privately and sets the
+            Verdict on-chain, revenue off-chain, settles itself. Chainlink reads the revenue and sets the
             rate. Hedera issues the bond and pays it back on its own schedule. The Graph makes every issuer&apos;s track
             record public.
           </p>

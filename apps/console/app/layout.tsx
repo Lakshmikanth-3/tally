@@ -14,7 +14,7 @@ const pixelify = Pixelify_Sans({ subsets: ['latin'], variable: '--font-pixelify'
 
 export const metadata: Metadata = {
   title: 'Tally — revenue becomes a bond',
-  description: "A shop's verified revenue becomes a short bond. Underwritten in private, priced in public, settles itself.",
+  description: "A shop's verified revenue becomes a short bond. Verdict on-chain, revenue off-chain, settles itself.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

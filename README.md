@@ -1,6 +1,6 @@
 # Tally
 
-A shop's verified revenue becomes a short bond. Underwritten in private, priced in public, settles itself.
+A shop's verified revenue becomes a short bond. Verdict on-chain, revenue off-chain, settles itself.
 
 
 
@@ -241,7 +241,7 @@ history). New here:
 
 ## What this is
 
-A shop's revenue is read once, privately, inside a Chainlink Confidential Compute (CRE) enclave. Only a verdict — approve/decline, coupon rate — ever leaves the enclave. That verdict becomes the coupon rate on a Hedera Asset Tokenization Studio bond. Coupons and redemption fire on Hedera Scheduled Transactions, with no keeper bot. Every issuer's repayment history is indexed by a Graph subgraph into a public, queryable performance register.
+A shop's aggregate revenue is read by a Chainlink CRE workflow written for a TEE; the enclave is not running yet, so this is not confidential today. Only a verdict — approve/decline, coupon rate — goes on-chain. That verdict becomes the coupon rate on a Hedera Asset Tokenization Studio bond. Coupons and redemption fire on Hedera Scheduled Transactions, with no keeper bot. Every issuer's repayment history is indexed by a Graph subgraph into a public, queryable performance register.
 
 ## Demo data disclosure
 
