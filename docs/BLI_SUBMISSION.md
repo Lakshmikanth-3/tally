@@ -268,7 +268,7 @@ contracts are deployed to Sepolia and that copy is indexed.
 |---|---|
 | GitHub repository (public, MIT) | https://github.com/Lakshmikanth-3/Tally |
 | Live application | https://tally-eight-jet.vercel.app/ |
-| Demo video (2–3 min) | **PENDING — not yet recorded** (script: `docs/BLI_VIDEO_SCRIPT.md`) |
+| Demo video (2–3 min) | https://youtu.be/XHoCYn5jr6o |
 | Architecture documentation | `docs/ARCHITECTURE.md` |
 | Legal and regulatory analysis | `docs/LEGAL_AND_REGULATORY.md` |
 | Guided walkthrough with verification commands | `DEMO.md` |

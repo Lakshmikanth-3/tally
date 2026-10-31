@@ -19,7 +19,7 @@ that execute themselves, and recorded in a public repayment register.**
 - **Bounty:** Chainlink — "Best workflow with CRE"
 - **Legal design:** **[docs/LEGAL_AND_REGULATORY.md](docs/LEGAL_AND_REGULATORY.md)** — written for a lawyer reader
 - **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Submission text:** [docs/BLI_SUBMISSION.md](docs/BLI_SUBMISSION.md) · **Video script:** [docs/BLI_VIDEO_SCRIPT.md](docs/BLI_VIDEO_SCRIPT.md)
-- **Live demo:** https://tally-eight-jet.vercel.app/ · **Video:** _PENDING — not yet recorded_
+- **Live demo:** https://tally-eight-jet.vercel.app/ · **Video:** https://youtu.be/XHoCYn5jr6o
 - **License:** [MIT](LICENSE)
 
 > **This is a testnet prototype.** Not an offer of securities, not a regulated
